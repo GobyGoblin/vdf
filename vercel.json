@@ -2,6 +2,13 @@
     "version": 2,
     "rewrites": [
         {
+<<<<<<< HEAD
+=======
+            "source": "/api/debug",
+            "destination": "/api/debug.js"
+        },
+        {
+>>>>>>> master
             "source": "/api/(.*)",
             "destination": "/api/index.js"
         },

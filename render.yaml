@@ -3,7 +3,11 @@ services:
     name: vdf-backend
     runtime: node
     plan: free
+<<<<<<< HEAD
     rootDir: server
+=======
+    rootDir: api/server
+>>>>>>> master
     buildCommand: npm install
     startCommand: node server.js
     envVars:
