@@ -7,10 +7,14 @@ const __dirname = path.dirname(__filename);
 
 import sqlite3 from 'sqlite3';
 
+const storagePath = process.env.VERCEL
+  ? '/tmp/database.sqlite'
+  : path.join(__dirname, '../database.sqlite');
+
 const sequelize = new Sequelize({
   dialect: 'sqlite',
   dialectModule: sqlite3,
-  storage: path.join(__dirname, '../database.sqlite'),
+  storage: storagePath,
   logging: false,
 });
 
