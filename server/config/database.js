@@ -9,9 +9,11 @@ const __dirname = path.dirname(__filename);
 
 let sequelize;
 
-if (process.env.DATABASE_URL) {
-  // Use PostgreSQL if DATABASE_URL is provided (ideal for Vercel/Production)
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
+const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+
+if (dbUrl) {
+  // Use PostgreSQL if DATABASE_URL or POSTGRES_URL is provided (ideal for Vercel/Production)
+  sequelize = new Sequelize(dbUrl, {
     dialect: 'postgres',
     dialectModule: pg,
     logging: false,
