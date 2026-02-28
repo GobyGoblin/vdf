@@ -144,18 +144,26 @@ const startServer = async () => {
       console.log('✅ Default admin user created (admin@example.com / admin123)');
     }
 
-    app.listen(PORT, () => {
-      console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-      console.log(`📡 API: http://localhost:${PORT}/api`);
-      console.log(`🔒 CORS origins: ${allowedOrigins.join(', ')}`);
-      console.log(`🛡️  Environment: ${process.env.NODE_ENV || 'development'}\n`);
-    });
+    if (!process.env.VERCEL) {
+      app.listen(PORT, () => {
+        console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+        console.log(`📡 API: http://localhost:${PORT}/api`);
+        console.log(`🔒 CORS origins: ${allowedOrigins.join(', ')}`);
+        console.log(`🛡️  Environment: ${process.env.NODE_ENV || 'development'}\n`);
+      });
+    } else {
+      console.log('✅ Running in Vercel environment (Serverless)');
+    }
   } catch (error) {
     console.error('❌ Unable to start server:', error);
-    process.exit(1);
+    throw error; // Let the caller handle it
   }
 };
 
-startServer();
+export { startServer };
+
+if (!process.env.VERCEL) {
+  startServer();
+}
 
 export default app;

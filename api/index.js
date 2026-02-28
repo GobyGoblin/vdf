@@ -1,5 +1,5 @@
-import { startServer } from './server/server.js';
-import app from './server/server.js';
+import { startServer } from '../server/server.js';
+import app from '../server/server.js';
 
 let isInitialized = false;
 
