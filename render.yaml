@@ -1,0 +1,19 @@
+# Render.com Blueprint - deploy backend + frontend + SQLite in one service
+# https://render.com/docs/blueprint-spec
+# Set JWT_SECRET and CORS_ORIGIN in the Render dashboard after creating the service.
+services:
+  - type: web
+    name: german-talent-connect
+    runtime: node
+    region: frankfurt
+    plan: free
+
+    buildCommand: npm install && npm run build && cd server && npm install
+    startCommand: node server/server.js
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      # Add in Render Dashboard: JWT_SECRET (required), CORS_ORIGIN = https://your-service.onrender.com

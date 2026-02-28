@@ -1,0 +1,260 @@
+[
+  {
+    "order": 1,
+    "startLat": 40.7128,
+    "startLng": -74.006,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.3,
+    "color": "#ffffff",
+    "label": "IT & Engineering"
+  },
+  {
+    "order": 2,
+    "startLat": 35.6762,
+    "startLng": 139.6503,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.4,
+    "color": "#ffffff",
+    "label": "Healthcare"
+  },
+  {
+    "order": 3,
+    "startLat": -23.5505,
+    "startLng": -46.6333,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.35,
+    "color": "#ffffff",
+    "label": "Construction"
+  },
+  {
+    "order": 4,
+    "startLat": -33.8688,
+    "startLng": 151.2093,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.5,
+    "color": "#ffffff",
+    "label": "Logistics"
+  },
+  {
+    "order": 5,
+    "startLat": -33.9249,
+    "startLng": 18.4241,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.25,
+    "color": "#ffffff",
+    "label": "Manufacturing"
+  },
+  {
+    "order": 6,
+    "startLat": 25.2048,
+    "startLng": 55.2708,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.15,
+    "color": "#ffffff",
+    "label": "Green Energy"
+  },
+  {
+    "order": 7,
+    "startLat": 28.6139,
+    "startLng": 77.209,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.3,
+    "color": "#ffffff"
+  },
+  {
+    "order": 8,
+    "startLat": 51.5074,
+    "startLng": -0.1278,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.1,
+    "color": "#ffffff"
+  },
+  {
+    "order": 9,
+    "startLat": 48.8566,
+    "startLng": 2.3522,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.1,
+    "color": "#ffffff"
+  },
+  {
+    "order": 10,
+    "startLat": 30.0444,
+    "startLng": 31.2357,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.2,
+    "color": "#ffffff"
+  },
+  {
+    "order": 11,
+    "startLat": 55.7558,
+    "startLng": 37.6173,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.15,
+    "color": "#ffffff"
+  },
+  {
+    "order": 12,
+    "startLat": 39.9042,
+    "startLng": 116.4074,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.35,
+    "color": "#ffffff"
+  },
+  {
+    "order": 13,
+    "startLat": -6.2088,
+    "startLng": 106.8456,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.4,
+    "color": "#ffffff"
+  },
+  {
+    "order": 14,
+    "startLat": 6.5244,
+    "startLng": 3.3792,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.2,
+    "color": "#ffffff"
+  },
+  {
+    "order": 15,
+    "startLat": -34.6037,
+    "startLng": -58.3816,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.45,
+    "color": "#ffffff"
+  },
+  {
+    "order": 16,
+    "startLat": 19.4326,
+    "startLng": -99.1332,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.4,
+    "color": "#ffffff"
+  },
+  {
+    "order": 17,
+    "startLat": 43.6532,
+    "startLng": -79.3832,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.35,
+    "color": "#ffffff"
+  },
+  {
+    "order": 18,
+    "startLat": 1.3521,
+    "startLng": 103.8198,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.3,
+    "color": "#ffffff"
+  },
+  {
+    "order": 19,
+    "startLat": 37.5665,
+    "startLng": 126.978,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.4,
+    "color": "#ffffff"
+  },
+  {
+    "order": 20,
+    "startLat": -1.2921,
+    "startLng": 36.8219,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.25,
+    "color": "#ffffff"
+  },
+  {
+    "order": 21,
+    "startLat": 41.0082,
+    "startLng": 28.9784,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.15,
+    "color": "#ffffff"
+  },
+  {
+    "order": 22,
+    "startLat": 13.7563,
+    "startLng": 100.5018,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.35,
+    "color": "#ffffff"
+  },
+  {
+    "order": 23,
+    "startLat": 24.7136,
+    "startLng": 46.6753,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.2,
+    "color": "#ffffff"
+  },
+  {
+    "order": 24,
+    "startLat": 35.6892,
+    "startLng": 51.389,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.2,
+    "color": "#ffffff"
+  },
+  {
+    "order": 25,
+    "startLat": -33.4489,
+    "startLng": -70.6693,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.45,
+    "color": "#ffffff"
+  },
+  {
+    "order": 26,
+    "startLat": -12.0464,
+    "startLng": -77.0428,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.4,
+    "color": "#ffffff"
+  },
+  {
+    "order": 27,
+    "startLat": 33.5731,
+    "startLng": -7.5898,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.2,
+    "color": "#ffffff"
+  },
+  {
+    "order": 28,
+    "startLat": 34.0209,
+    "startLng": -6.8416,
+    "endLat": 52.52,
+    "endLng": 13.405,
+    "arcAlt": 0.2,
+    "color": "#ffffff"
+  }
+]
