@@ -2,12 +2,9 @@
     "name": "vdf-deployment",
     "version": "1.0.0",
     "type": "module",
-<<<<<<< HEAD
-=======
     "scripts": {
         "build": "echo 'Already built'"
     },
->>>>>>> master
     "dependencies": {
         "bcryptjs": "^2.4.3",
         "cors": "^2.8.5",
