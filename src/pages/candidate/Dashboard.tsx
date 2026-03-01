@@ -15,7 +15,7 @@ import {
   Star
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout';
-import { authAPI, profilesAPI } from '@/lib/api';
+import { authAPI, profilesAPI, getCurrentUser } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 
@@ -44,6 +44,7 @@ const CandidateDashboard = () => {
         });
       } catch (err) {
         console.error(err);
+        setUser(getCurrentUser());
       } finally {
         setLoading(false);
       }
@@ -51,9 +52,9 @@ const CandidateDashboard = () => {
     loadData();
   }, []);
 
-  const isVerified = user?.verificationStatus === 'verified';
-  const isPending = user?.verificationStatus === 'pending';
-  const isRejected = user?.verificationStatus === 'rejected';
+  const isVerified = user?.isVerified === true || user?.verificationStatus === 'verified';
+  const isPending = !isVerified && user?.verificationStatus === 'pending';
+  const isRejected = !isVerified && user?.verificationStatus === 'rejected';
   const isUnverified = !isVerified && !isPending && !isRejected;
 
   const stats = [

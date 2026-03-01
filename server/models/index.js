@@ -11,7 +11,7 @@ export const User = sequelize.define('User', {
   email: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
+    unique: 'user_role_composite',
     validate: { isEmail: true },
   },
   password: {
@@ -21,6 +21,7 @@ export const User = sequelize.define('User', {
   role: {
     type: DataTypes.ENUM('candidate', 'employer', 'staff', 'admin'),
     allowNull: false,
+    unique: 'user_role_composite',
   },
   firstName: { type: DataTypes.STRING, allowNull: true },
   lastName: { type: DataTypes.STRING, allowNull: true },

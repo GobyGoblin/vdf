@@ -7,6 +7,8 @@ import {
     Briefcase,
     FileText,
     ArrowUp,
+    Target,
+    Calculator,
     ArrowDown,
     Activity,
     Calendar
@@ -15,15 +17,16 @@ import { adminAPI } from '@/lib/api';
 
 interface Stats {
     userGrowth: { name: string; value: number }[];
-    jobGrowth: { name: string; value: number }[];
-    applicationGrowth: { name: string; value: number }[];
+    demandGrowth: { name: string; value: number }[];
+    quoteGrowth: { name: string; value: number }[];
     retentionRate: number;
     churnRate: number;
     activeUsers: number;
     totalUsers?: number;
     totalEmployers?: number;
     totalWorkers?: number;
-    totalJobs?: number;
+    totalDemands?: number;
+    totalQuotes?: number;
     totalInsights?: number;
 }
 
@@ -120,8 +123,8 @@ const AdminRetention = () => {
                         { label: 'Total Users', value: generalStats.totalUsers, icon: Users, color: 'text-gold' },
                         { label: 'Candidates', value: generalStats.totalWorkers, icon: Users, color: 'text-success' },
                         { label: 'Employers', value: generalStats.totalEmployers, icon: Briefcase, color: 'text-info' },
-                        { label: 'Active Jobs', value: generalStats.totalJobs, icon: Briefcase, color: 'text-purple-500' },
-                        { label: 'Insights', value: generalStats.totalInsights, icon: FileText, color: 'text-warning' },
+                        { label: 'Talent Demands', value: generalStats.totalDemands, icon: Target, color: 'text-purple-500' },
+                        { label: 'Quote Requests', value: generalStats.totalQuotes, icon: Calculator, color: 'text-warning' },
                     ].map((stat, i) => (
                         <motion.div
                             key={stat.label}
@@ -150,8 +153,8 @@ const AdminRetention = () => {
                             <TrendingUp className="w-5 h-5 text-gold" /> User Growth (Last 6 Months)
                         </h2>
                         <div className="flex items-end justify-between gap-2 h-40">
-                            {userGrowth.map((data, i) => {
-                                const maxValue = Math.max(...userGrowth.map(d => d.value), 10);
+                            {(userGrowth || []).map((data, i) => {
+                                const maxValue = Math.max(...(userGrowth || []).map((d: any) => d.value), 10);
                                 const heightPercentage = (data.value / maxValue) * 100;
                                 return (
                                     <div key={data.name} className="flex-1 flex flex-col items-center gap-2">
@@ -171,7 +174,7 @@ const AdminRetention = () => {
                         </div>
                     </motion.div>
 
-                    {/* Applications Growth */}
+                    {/* Quotes Growth */}
                     <motion.div
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -179,11 +182,11 @@ const AdminRetention = () => {
                         className="card-premium p-6"
                     >
                         <h2 className="text-lg font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-                            <Briefcase className="w-5 h-5 text-success" /> Application Volume
+                            <Calculator className="w-5 h-5 text-success" /> Quote Requests Volume
                         </h2>
                         <div className="flex items-end justify-between gap-2 h-40">
-                            {stats.applicationGrowth.map((data, i) => {
-                                const maxValue = Math.max(...stats.applicationGrowth.map(d => d.value), 10);
+                            {(stats.quoteGrowth || []).map((data, i) => {
+                                const maxValue = Math.max(...(stats.quoteGrowth || []).map((d: any) => d.value), 10);
                                 const heightPercentage = (data.value / maxValue) * 100;
                                 return (
                                     <div key={data.name} className="flex-1 flex flex-col items-center gap-2">

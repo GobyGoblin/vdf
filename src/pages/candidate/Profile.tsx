@@ -181,7 +181,7 @@ const CandidateProfile = () => {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-display font-bold text-foreground">My Profile</h1>
-              {profile.isVerified ? (
+              {profile.isVerified || profile.verificationStatus === 'verified' ? (
                 <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/10 text-success text-xs font-bold uppercase tracking-wider">
                   <Shield className="w-3.5 h-3.5" />
                   Verified

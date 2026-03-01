@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 // Use the logo from public folder
 const logo = '/logo.png';
-import { authAPI } from '@/lib/api';
+import { authAPI, getApiBaseUrl } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { checkApiHealth } from '@/lib/api-health';
 
@@ -14,6 +14,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<'candidate' | 'employer' | 'staff' | 'admin'>('candidate');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [apiConnected, setApiConnected] = useState<boolean | null>(null);
   const navigate = useNavigate();
 
@@ -35,6 +36,7 @@ const Login = () => {
     }
 
     setLoading(true);
+    setErrorMsg('');
 
     try {
       const result = await authAPI.login(email, password, role);
@@ -45,42 +47,32 @@ const Login = () => {
           description: 'Logged in successfully',
         });
 
-        // Redirect based on actual user role from server
+        // Pass user in state so ProtectedRoute/DashboardLayout don't need to call /me immediately
         const userRole = result.user.role || role;
-        switch (userRole) {
-          case 'candidate':
-            navigate('/candidate/dashboard');
-            break;
-          case 'employer':
-            navigate('/employer/dashboard');
-            break;
-          case 'staff':
-            navigate('/staff/dashboard');
-            break;
-          case 'admin':
-            navigate('/admin/dashboard');
-            break;
-          default:
-            navigate('/');
-        }
+        const path = userRole === 'candidate' ? '/candidate/dashboard'
+          : userRole === 'employer' ? '/employer/dashboard'
+            : userRole === 'staff' ? '/staff/dashboard'
+              : userRole === 'admin' ? '/admin/dashboard'
+                : '/';
+        navigate(path, { state: { user: result.user } });
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      const errorMessage = error.message || 'Failed to login. Please check your credentials and make sure the backend server is running.';
+      const serverMessage = error.response?.data?.error;
+      const errorMessage =
+        serverMessage ||
+        error.message ||
+        'Failed to login. Please check your credentials and make sure the backend server is running.';
 
-      // Check if it's a role mismatch error
-      if (errorMessage.includes('registered as')) {
-        toast({
-          title: 'Wrong Role Selected',
-          description: errorMessage,
-          variant: 'destructive',
-        });
+      if (error.response?.status === 401) {
+        const hint = typeof window !== 'undefined' && getApiBaseUrl().includes('localhost')
+          ? ' Use admin@example.com / admin123. If this is a deployed site, set VITE_API_URL to your backend URL and rebuild.'
+          : ' Use admin@example.com / admin123 (Admin role).';
+        setErrorMsg((serverMessage || 'Invalid email or password.') + hint);
+      } else if (errorMessage.includes('registered as')) {
+        setErrorMsg(errorMessage);
       } else {
-        toast({
-          title: 'Login Failed',
-          description: errorMessage,
-          variant: 'destructive',
-        });
+        setErrorMsg(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -145,14 +137,14 @@ const Login = () => {
                   </button>
                 ))}
               </div>
-              {/* Demo credentials hint */}
+              {/* Demo credentials hint - must match server default/seed */}
               <div className="mt-3 p-3 rounded-lg bg-gold/10 border border-gold/20">
-                <p className="text-xs text-gold font-medium mb-1">Demo Credentials:</p>
+                <p className="text-xs text-gold font-medium mb-1">Demo credentials:</p>
                 <p className="text-xs text-cream/60">
-                  {role === 'candidate' && 'maria@example.com / candidate123'}
-                  {role === 'employer' && 'hr@techcorp.de / employer123'}
-                  {role === 'staff' && 'staff@germantalent.de / staff123'}
-                  {role === 'admin' && 'admin@germantalent.de / admin123'}
+                  {role === 'admin' && 'admin@example.com / admin123'}
+                  {role === 'staff' && 'staff@example.com / password123 (run seed first)'}
+                  {role === 'employer' && 'employer1@example.com / password123 (run seed first)'}
+                  {role === 'candidate' && 'Register below or run server seed for demo users'}
                 </p>
               </div>
             </div>
@@ -209,6 +201,11 @@ const Login = () => {
             >
               {loading ? 'Signing in...' : 'Sign In'} <ArrowRight className="w-4 h-4" />
             </button>
+            {errorMsg && (
+              <p className="text-red-400 text-sm font-medium text-center mt-3 bg-red-400/10 p-2 rounded border border-red-400/20">
+                {errorMsg}
+              </p>
+            )}
           </form>
 
           <p className="mt-8 text-center text-cream/60">

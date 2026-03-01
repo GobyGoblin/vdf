@@ -10,6 +10,11 @@ import { fileURLToPath } from 'url';
 // Load env FIRST
 dotenv.config();
 
+// Ensure one JWT secret for the whole process so login (sign) and auth middleware (verify) always match
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'your-super-secret-jwt-key-change-this-in-production';
+}
+
 // Import routes
 import authRoutes from './routes/auth.js';
 import profilesRoutes from './routes/profiles.js';
@@ -41,20 +46,19 @@ app.use((req, res, next) => {
 // Helmet: sets various HTTP headers to help protect the app
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
-// CORS: restrict to known origins
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:8080')
-  .split(',')
-  .map(o => o.trim());
+// CORS: allow frontend origins (empty or * = allow all for easier deploy)
+const corsOrigin = (process.env.CORS_ORIGIN || '').trim();
+const allowedOrigins = corsOrigin === '*' || !corsOrigin
+  ? true  // allow any origin when not set
+  : corsOrigin.split(',').map(o => o.trim()).filter(Boolean);
 
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: Array.isArray(allowedOrigins)
+    ? (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) callback(null, true);
+        else callback(new Error('Not allowed by CORS'));
+      }
+    : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -141,24 +145,44 @@ const startServer = async () => {
     const { User } = await import('./models/index.js');
     const bcrypt = (await import('bcryptjs')).default;
 
-    const adminExists = await User.findOne({ where: { email: 'admin@example.com' } });
+    let adminExists = await User.findOne({ where: { email: 'admin@example.com' } });
     if (!adminExists) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      await User.create({
-        email: 'admin@example.com',
-        password: hashedPassword,
-        role: 'admin',
-        firstName: 'Admin',
-        lastName: 'User',
-        isVerified: true,
-      });
-      console.log('✅ Default admin user created (admin@example.com / admin123)');
+      try {
+        const hashedPassword = await bcrypt.hash('admin123', 10);
+        await User.create({
+          email: 'admin@example.com',
+          password: hashedPassword,
+          role: 'admin',
+          firstName: 'Admin',
+          lastName: 'User',
+          isVerified: true,
+        });
+        console.log('✅ Default admin user created (admin@example.com / admin123)');
+      } catch (createErr) {
+        console.warn('⚠️  Admin create failed (likely old DB schema):', createErr.message);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('🔄 Resetting database to fix schema...');
+          await sequelize.sync({ force: true });
+          const hashedPassword = await bcrypt.hash('admin123', 10);
+          await User.create({
+            email: 'admin@example.com',
+            password: hashedPassword,
+            role: 'admin',
+            firstName: 'Admin',
+            lastName: 'User',
+            isVerified: true,
+          });
+          console.log('✅ Database reset and admin user created (admin@example.com / admin123)');
+        } else {
+          console.error('❌ Set RESET_DB=1 and restart to reset database, or run: cd server && node seed.js');
+        }
+      }
     }
 
     app.listen(PORT, () => {
       console.log(`\n🚀 Server running on http://localhost:${PORT}`);
       console.log(`📡 API: http://localhost:${PORT}/api`);
-      console.log(`🔒 CORS origins: ${allowedOrigins.join(', ')}`);
+      console.log(`🔒 CORS origins: ${Array.isArray(allowedOrigins) ? allowedOrigins.join(', ') : '(any)'}`);
       console.log(`🛡️  Environment: ${process.env.NODE_ENV || 'development'}\n`);
     });
   } catch (error) {

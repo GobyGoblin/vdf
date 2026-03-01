@@ -3,7 +3,7 @@ import { User, Job, Application, Document as DocType, Insight, AuditLog, QuoteRe
 export type { QuoteRequest, Plan, AuditLog, TalentDemand, CandidateStatus, QuoteOption, InterviewMeeting, ProposedTime };
 
 // Use VITE_API_URL in production (e.g. '' for same-origin, or full URL for separate API)
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api';
+const API_URL = 'http://localhost:3001/api';
 const BASE_URL = API_URL ? API_URL.replace(/\/api\/?$/, '') : '';
 const API_BASE = API_URL || '/api';
 
@@ -12,7 +12,11 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // send cookies and auth headers with cross-origin requests
 });
+
+/** Current API base URL (for debugging / error messages) */
+export const getApiBaseUrl = () => API_BASE;
 
 export const getFileUrl = (path: string) => {
   if (!path) return '';
@@ -27,8 +31,8 @@ const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().
 // Current user state
 let currentUser: User | null = null;
 
-// Helper to get current user from localStorage
-const getCurrentUser = (): User | null => {
+// Helper to get current user from localStorage (exported for layout fallback)
+export const getCurrentUser = (): User | null => {
   if (currentUser) return currentUser;
   const stored = localStorage.getItem('currentUser');
   if (stored) {
@@ -77,6 +81,14 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// On 401: do NOT clear token here. Other endpoints (e.g. profiles/dashboard/stats) may
+// return 401 and would clear token, logging the user out after a successful login.
+// Components handle 401 (e.g. use getCurrentUser() fallback). Explicit logout only via authAPI.logout().
+apiClient.interceptors.response.use(
+  (res) => res,
+  (err) => Promise.reject(err)
+);
 
 // Auth API
 export const authAPI = {
@@ -289,6 +301,21 @@ export const adminAPI = {
 
   getRetentionStats: async () => {
     const response = await apiClient.get('admin/retention-stats');
+    return response.data;
+  },
+
+  createUser: async (userData: any) => {
+    const response = await apiClient.post('admin/users', userData);
+    return response.data;
+  },
+
+  updateUser: async (id: string, userData: any) => {
+    const response = await apiClient.put(`admin/users/${id}`, userData);
+    return response.data;
+  },
+
+  deleteUser: async (id: string) => {
+    const response = await apiClient.delete(`admin/users/${id}`);
     return response.data;
   },
 };

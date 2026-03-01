@@ -11,7 +11,10 @@ import {
     Building2,
     User,
     Mail,
-    Calendar
+    Calendar,
+    Plus,
+    Trash2,
+    Edit
 } from 'lucide-react';
 import { adminAPI } from '@/lib/api';
 
@@ -23,6 +26,7 @@ interface UserData {
     role: string;
     companyName?: string;
     isVerified: boolean;
+    verificationStatus?: string;
     createdAt: string;
 }
 
@@ -32,9 +36,78 @@ const AdminUsers = () => {
     const [filter, setFilter] = useState<string>('all');
     const [search, setSearch] = useState('');
 
+    // Modal state
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editingUserId, setEditingUserId] = useState<string | null>(null);
+    const [formData, setFormData] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+        role: 'candidate',
+        companyName: ''
+    });
+
     useEffect(() => {
         loadUsers();
     }, []);
+
+    const handleDelete = async (userId: string) => {
+        if (!confirm('Are you sure you want to delete this user?')) return;
+        try {
+            await adminAPI.deleteUser(userId);
+            setUsers(users.filter(u => u.id !== userId));
+        } catch (error) {
+            console.error('Failed to delete user:', error);
+            alert('Failed to delete user');
+        }
+    };
+
+    const handleEditClick = (user: UserData) => {
+        setIsEditMode(true);
+        setEditingUserId(user.id);
+        setFormData({
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email || '',
+            password: '', // Leave empty for edit unless they want to change it (not supported yet, so we ignore)
+            role: user.role,
+            companyName: user.companyName || ''
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleAddClick = () => {
+        setIsEditMode(false);
+        setEditingUserId(null);
+        setFormData({
+            firstName: '',
+            lastName: '',
+            email: '',
+            password: '',
+            role: 'staff',
+            companyName: ''
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleModalSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            if (isEditMode && editingUserId) {
+                const updatedUser = await adminAPI.updateUser(editingUserId, formData);
+                setUsers(users.map(u => u.id === editingUserId ? updatedUser.user : u));
+            } else {
+                const newUser = await adminAPI.createUser(formData);
+                setUsers([newUser.user, ...users]);
+            }
+            setIsModalOpen(false);
+        } catch (error: any) {
+            console.error('Failed to save user:', error);
+            alert(error.response?.data?.error || 'Failed to save user');
+        }
+    };
 
     const loadUsers = async () => {
         try {
@@ -56,7 +129,11 @@ const AdminUsers = () => {
                 await adminAPI.verifyWorker(userId, isVerified);
             }
             setUsers(users => users.map(u =>
-                u.id === userId ? { ...u, isVerified } : u
+                u.id === userId ? {
+                    ...u,
+                    isVerified,
+                    verificationStatus: isVerified ? 'verified' : (u.verificationStatus === 'verified' ? 'unverified' : u.verificationStatus)
+                } : u
             ));
         } catch (error) {
             console.error('Failed to update verification:', error);
@@ -98,10 +175,21 @@ const AdminUsers = () => {
             <div className="space-y-6">
                 {/* Header */}
                 <div>
-                    <h1 className="text-2xl font-display font-bold text-foreground">User Management</h1>
-                    <p className="text-muted-foreground">
-                        Manage all users on the platform ({users.length} total)
-                    </p>
+                    <div className="flex justify-between items-center outline-none">
+                        <div>
+                            <h1 className="text-2xl font-display font-bold text-foreground">User Management</h1>
+                            <p className="text-muted-foreground">
+                                Manage all users on the platform ({users.length} total)
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleAddClick}
+                            className="flex items-center gap-2 px-4 py-2 bg-gold text-navy rounded-lg font-medium hover:bg-gold/90 transition-colors"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add User
+                        </button>
+                    </div>
                 </div>
 
                 {/* Filters */}
@@ -127,8 +215,8 @@ const AdminUsers = () => {
                                     key={role}
                                     onClick={() => setFilter(role)}
                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${filter === role
-                                            ? 'bg-gold text-navy'
-                                            : 'bg-secondary text-muted-foreground hover:text-foreground'
+                                        ? 'bg-gold text-navy'
+                                        : 'bg-secondary text-muted-foreground hover:text-foreground'
                                         }`}
                                 >
                                     {role.charAt(0).toUpperCase() + role.slice(1)}
@@ -235,8 +323,21 @@ const AdminUsers = () => {
                                                             </button>
                                                         )
                                                     )}
-                                                </div>
-                                            </td>
+                                                    <button
+                                                        onClick={() => handleEditClick(user)}
+                                                        className="p-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+                                                        title="Edit User"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(user.id)}
+                                                        className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                                                        title="Delete User"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div></td>
                                         </motion.tr>
                                     ))}
                                 </tbody>
@@ -245,6 +346,111 @@ const AdminUsers = () => {
                     )}
                 </div>
             </div>
+
+            {/* Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-card w-full max-w-lg rounded-xl shadow-xl border border-border p-6"
+                    >
+                        <h2 className="text-xl font-bold mb-4">{isEditMode ? 'Edit User' : 'Add New User'}</h2>
+                        <form onSubmit={handleModalSubmit} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">First Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.firstName}
+                                        onChange={e => setFormData({ ...formData, firstName: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-secondary border border-border"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Last Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.lastName}
+                                        onChange={e => setFormData({ ...formData, lastName: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-secondary border border-border"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Email</label>
+                                <input
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                    disabled={isEditMode}
+                                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border disabled:opacity-50"
+                                    required
+                                />
+                            </div>
+
+                            {!isEditMode && (
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Password</label>
+                                    <input
+                                        type="password"
+                                        value={formData.password}
+                                        onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-secondary border border-border"
+                                        required
+                                    />
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Role</label>
+                                <select
+                                    value={formData.role}
+                                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                                    disabled={isEditMode}
+                                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border disabled:opacity-50"
+                                >
+                                    <option value="candidate">Candidate</option>
+                                    <option value="employer">Employer</option>
+                                    <option value="staff">Staff</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+
+                            {formData.role === 'employer' && (
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Company Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.companyName}
+                                        onChange={e => setFormData({ ...formData, companyName: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-secondary border border-border"
+                                        required={formData.role === 'employer'}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="flex justify-end gap-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsModalOpen(false)}
+                                    className="px-4 py-2 rounded-lg font-medium hover:bg-secondary transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-gold text-navy rounded-lg font-medium hover:bg-gold/90 transition-colors"
+                                >
+                                    {isEditMode ? 'Save Changes' : 'Create User'}
+                                </button>
+                            </div>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
         </DashboardLayout>
     );
 };

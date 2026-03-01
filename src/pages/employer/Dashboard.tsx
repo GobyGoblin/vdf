@@ -19,7 +19,7 @@ import {
   Eye
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout';
-import { profilesAPI, authAPI, talentDemandsAPI } from '@/lib/api';
+import { profilesAPI, authAPI, talentDemandsAPI, getCurrentUser } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { TalentDemand } from '@/lib/mockData';
 
@@ -57,6 +57,7 @@ const EmployerDashboard = () => {
         });
       } catch (error) {
         console.error('Failed to load data:', error);
+        setUser(getCurrentUser());
       } finally {
         setLoading(false);
       }
@@ -71,9 +72,9 @@ const EmployerDashboard = () => {
     { label: 'Profile Views Sent', value: dashboardStats.consentRequests, icon: Eye, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
   ];
 
-  const isVerified = user?.verificationStatus === 'verified';
-  const isPending = user?.verificationStatus === 'pending';
-  const isRejected = user?.verificationStatus === 'rejected';
+  const isVerified = user?.isVerified === true || user?.verificationStatus === 'verified';
+  const isPending = !isVerified && user?.verificationStatus === 'pending';
+  const isRejected = !isVerified && user?.verificationStatus === 'rejected';
 
   if (loading) {
     return (

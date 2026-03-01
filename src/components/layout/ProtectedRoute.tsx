@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { authAPI } from '@/lib/api';
+import { authAPI, getCurrentUser } from '@/lib/api';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
@@ -8,23 +8,31 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-    const [user, setUser] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
     const location = useLocation();
+    const userFromState = (location.state as { user?: unknown })?.user;
+    const [user, setUser] = useState<any>(userFromState ?? null);
+    const [loading, setLoading] = useState(!userFromState);
 
     useEffect(() => {
+        if (userFromState) {
+            setUser(userFromState);
+            setLoading(false);
+            return;
+        }
         const checkAuth = async () => {
             try {
                 const { user: userData } = await authAPI.getMe();
                 setUser(userData);
             } catch (err) {
-                setUser(null);
+                // When /me returns 401 we don't clear token, so keep user from storage and stay on page
+                const fallback = getCurrentUser();
+                setUser(fallback ?? null);
             } finally {
                 setLoading(false);
             }
         };
         checkAuth();
-    }, []);
+    }, [userFromState]);
 
     if (loading) {
         return (

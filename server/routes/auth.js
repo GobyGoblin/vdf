@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User, CandidateProfile, EmployerProfile } from '../models/index.js';
 import { authenticate } from '../middleware/auth.js';
+import { getJwtSecret } from '../config/auth.js';
 
 const router = express.Router();
 
@@ -19,8 +20,8 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
-    // Check if user exists
-    const existingUser = await User.findOne({ where: { email } });
+    // Check if user exists with the same role
+    const existingUser = await User.findOne({ where: { email, role } });
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' });
     }
@@ -51,7 +52,7 @@ router.post('/register', async (req, res) => {
     // Generate token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production',
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 
@@ -78,21 +79,40 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    let { email, password, role } = req.body;
+    if (typeof email === 'string') email = email.trim().toLowerCase();
+    if (typeof password === 'string') password = password.trim();
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    console.log(`Login attempt for email: ${email}`);
-    const user = await User.findOne({ where: { email } });
+    console.log(`Login attempt for email: ${email}, role: ${role}`);
+    // Prioritize exact role match, but allow fallback ONLY if no role was provided by older clients.
+    let user;
+    if (role) {
+      user = await User.findOne({ where: { email, role } });
+    } else {
+      user = await User.findOne({ where: { email } });
+    }
+
     if (!user) {
-      console.log(`User not found: ${email}`);
+      console.log(`User not found: ${email}, role: ${role}`);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    console.log(`Checking password for user: ${user.email}`);
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const storedPassword = user.password;
+    if (!storedPassword) {
+      console.log(`User ${user.email} has no password set`);
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+    let isValidPassword = false;
+    try {
+      isValidPassword = await bcrypt.compare(password, storedPassword);
+    } catch (compareErr) {
+      console.error('Password compare error:', compareErr.message);
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
     if (!isValidPassword) {
       console.log(`Invalid password for user: ${user.email}`);
       return res.status(401).json({ error: 'Invalid email or password' });
@@ -108,7 +128,7 @@ router.post('/login', async (req, res) => {
     console.log(`Generating token for user: ${user.email}`);
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production',
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 

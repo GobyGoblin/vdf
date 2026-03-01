@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { authAPI } from '@/lib/api';
+import { authAPI, getCurrentUser } from '@/lib/api';
 import {
   LayoutDashboard,
   User,
@@ -94,7 +94,9 @@ const mockUsers: Record<UserRole, { name: string; email: string }> = {
 
 export const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any>(() => getCurrentUser());
+  const [notifications, setNotifications] = useState<{ id: string, title: string, href: string }[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const navigation = navigationByRole[role];
@@ -109,9 +111,46 @@ export const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
         if (userData.role !== role && userData.role !== 'admin') {
           navigate(`/${userData.role}/dashboard`);
         }
+
+        if (userData.role === 'staff' || userData.role === 'admin') {
+          try {
+            const { staffAPI } = await import('@/lib/api');
+            const [reviewsRes, quotesRes] = await Promise.all([
+              staffAPI.getPendingReviews().catch(() => ({ pending: [] })),
+              staffAPI.getQuoteRequests().catch(() => ({ requests: [] }))
+            ]);
+
+            const newNotifs = [];
+            const reviewItems = Array.isArray(reviewsRes) ? reviewsRes : (reviewsRes.pending || []);
+            if (reviewItems.length > 0) {
+              newNotifs.push({
+                id: 'reviews',
+                title: `${reviewItems.length} new profile review request(s)`,
+                href: '/staff/review-queue'
+              });
+            }
+
+            const quoteItems = Array.isArray(quotesRes) ? quotesRes : (quotesRes.requests || []);
+            const pendingQuotes = quoteItems.filter((q: any) => q.status === 'pending');
+            if (pendingQuotes.length > 0) {
+              newNotifs.push({
+                id: 'quotes',
+                title: `${pendingQuotes.length} new pending quote request(s)`,
+                href: '/staff/quotes'
+              });
+            }
+
+            setNotifications(newNotifs);
+          } catch (e) {
+            console.error('Failed to load notifications', e);
+          }
+        }
       } catch (err) {
         console.error(err);
-        navigate('/login');
+        // Keep showing user from login if /me failed (e.g. token issue)
+        const fallback = getCurrentUser();
+        if (fallback) setUser(fallback);
+        else navigate('/login');
       }
     };
     loadUser();
@@ -257,10 +296,48 @@ export const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
             <div className="flex-1 lg:flex-none" />
 
             <div className="flex items-center gap-4">
-              <button className="relative p-2 text-muted-foreground hover:text-foreground transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-gold rounded-full" />
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Bell className="w-5 h-5" />
+                  {notifications.length > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-gold rounded-full" />
+                  )}
+                </button>
+
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-card rounded-xl shadow-xl border border-border overflow-hidden z-50">
+                    <div className="p-4 border-b border-border bg-secondary/50 flex justify-between items-center">
+                      <h3 className="font-semibold text-foreground">Notifications</h3>
+                      <button onClick={() => setShowNotifications(false)} className="text-muted-foreground hover:text-foreground">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No new notifications
+                        </div>
+                      ) : (
+                        notifications.map(notif => (
+                          <Link
+                            key={notif.id}
+                            to={notif.href}
+                            onClick={() => setShowNotifications(false)}
+                            className="block p-4 border-b border-border hover:bg-secondary/50 transition-colors last:border-0"
+                          >
+                            <p className="text-sm font-medium text-foreground">{notif.title}</p>
+                            <p className="text-xs text-muted-foreground mt-1">Click to view details</p>
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="hidden sm:flex items-center gap-2 pl-4 border-l border-border">
                 <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
                   <User className="w-4 h-4 text-foreground" />

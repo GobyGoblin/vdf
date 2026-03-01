@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { DashboardLayout } from '@/components/layout';
 import { Users, Building2, Shield, FileText, ArrowRight, BarChart3, FolderOpen, Clock } from 'lucide-react';
-import { adminAPI } from '@/lib/api';
+import { adminAPI, getToken } from '@/lib/api';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:all": "concurrently -n api,web -c cyan,green \"node server/server.js\" \"vite\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
@@ -12,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "server": "node server/server.js",
-    "start": "node server/server.js"
+    "start": "node server/server.js",
+    "reset-db": "node -e \"const fs=require('fs');const path=require('path');const p=path.join(process.cwd(),'server','database.sqlite');try{fs.unlinkSync(p);console.log('Deleted',p);}catch(e){console.log('Stop the server first, then run: npm run reset-db');}\""
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
@@ -96,6 +98,7 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "concurrently": "^9.1.0"
   }
 }

@@ -1,36 +1,36 @@
 import jwt from 'jsonwebtoken';
-
-const getSecret = () => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('JWT_SECRET environment variable is not set');
-  }
-  return secret;
-};
+import { getJwtSecret } from '../config/auth.js';
 
 export const authenticate = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'No token provided' });
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[auth] No Authorization header for', req.method, req.path);
+      }
+      return res.status(401).json({ error: 'No token provided', code: 'NO_TOKEN' });
     }
 
     const token = authHeader.split(' ')[1];
     if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+      return res.status(401).json({ error: 'No token provided', code: 'NO_TOKEN' });
     }
 
-    const decoded = jwt.verify(token, getSecret());
+    const secret = getJwtSecret();
+    const decoded = jwt.verify(token, secret);
     req.user = decoded;
     next();
   } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[auth] verify failed for', req.method, req.path, ':', error.message);
+    }
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expired' });
+      return res.status(401).json({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
     }
     if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Invalid token' });
+      return res.status(401).json({ error: 'Invalid token', code: 'INVALID_TOKEN', message: error.message });
     }
-    return res.status(401).json({ error: 'Authentication failed' });
+    return res.status(401).json({ error: 'Authentication failed', code: 'AUTH_FAILED' });
   }
 };
 
@@ -40,7 +40,7 @@ export const authenticateOptional = (req, res, next) => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
       if (token) {
-        const decoded = jwt.verify(token, getSecret());
+        const decoded = jwt.verify(token, getJwtSecret());
         req.user = decoded;
       }
     }
@@ -67,7 +67,7 @@ export const authorize = (...roles) => {
 export const generateToken = (user) => {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role },
-    getSecret(),
+    getJwtSecret(),
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };
