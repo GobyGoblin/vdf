@@ -3,7 +3,7 @@ import { User, Job, Application, Document as DocType, Insight, AuditLog, QuoteRe
 export type { QuoteRequest, Plan, AuditLog, TalentDemand, CandidateStatus, QuoteOption, InterviewMeeting, ProposedTime };
 
 // Use VITE_API_URL in production (e.g. '' for same-origin, or full URL for separate API)
-const API_URL = 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL ?? 'https://vdf-111l.vercel.app/api';
 const BASE_URL = API_URL ? API_URL.replace(/\/api\/?$/, '') : '';
 const API_BASE = API_URL || '/api';
 
