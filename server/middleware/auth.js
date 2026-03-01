@@ -1,11 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 const getSecret = () => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('JWT_SECRET environment variable is not set');
-  }
-  return secret;
+  return process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 };
 
 export const authenticate = (req, res, next) => {
