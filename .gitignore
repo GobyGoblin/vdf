@@ -41,3 +41,5 @@ server/uploads/*
 server/node_modules
 server/database.sqlite
 server/.env
+.vercel
+.env*.local

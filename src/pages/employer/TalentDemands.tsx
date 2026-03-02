@@ -162,7 +162,7 @@ const TalentDemands = () => {
         }
     };
 
-    const isVerified = user?.verificationStatus === 'verified';
+    const isVerified = user?.isVerified === true || user?.verificationStatus === 'verified';
 
     return (
         <DashboardLayout role="employer">

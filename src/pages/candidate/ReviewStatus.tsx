@@ -101,11 +101,12 @@ const CandidateReviewStatus = () => {
     })
   };
 
-  const status = user?.verificationStatus || 'unverified';
-  const isVerified = status === 'verified';
-  const isRejected = status === 'rejected';
-  const isPending = status === 'pending';
-  const isUnverified = status === 'unverified';
+  const isUserVerified = user?.isVerified === true || user?.verificationStatus === 'verified';
+  const status = isUserVerified ? 'verified' : (user?.verificationStatus || 'unverified');
+  const isVerified = isUserVerified;
+  const isRejected = !isVerified && status === 'rejected';
+  const isPending = !isVerified && status === 'pending';
+  const isUnverified = !isVerified && status === 'unverified';
 
   const missingFields = [
     !user?.firstName && 'firstName',

@@ -221,7 +221,8 @@ const EmployerCandidateDetail = () => {
     );
   }
 
-  if (!user || user.verificationStatus !== 'verified') {
+  const isUserVerified = user?.isVerified === true || user?.verificationStatus === 'verified';
+  if (!user || !isUserVerified) {
     return (
       <DashboardLayout role="employer">
         <div className="flex flex-col items-center justify-center py-20 card-premium border-gold/20 bg-gold/5 mt-8 max-w-xl mx-auto">

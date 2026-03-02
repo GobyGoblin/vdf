@@ -133,7 +133,7 @@ const EmployerTalentPool = () => {
           <div className="flex items-center justify-center py-20">
             <div className="w-10 h-10 border-4 border-gold/30 border-t-gold rounded-full animate-spin" />
           </div>
-        ) : !user || user.verificationStatus !== 'verified' ? (
+        ) : !user || (!user.isVerified && user.verificationStatus !== 'verified') ? (
           <div className="flex flex-col items-center justify-center py-20 card-premium border-gold/20 bg-gold/5">
             <div className="w-20 h-20 rounded-3xl bg-gold/20 flex items-center justify-center mb-6 shadow-xl shadow-gold/10 border border-gold/30">
               <Shield className="w-10 h-10 text-gold" />

@@ -155,9 +155,11 @@ const EmployerOnboarding = () => {
   };
 
   const renderSummary = () => {
-    const isPending = userProfile?.verificationStatus === 'pending';
-    const isVerified = userProfile?.verificationStatus === 'verified';
-    const isRejected = userProfile?.verificationStatus === 'rejected';
+    const isUserVerified = userProfile?.isVerified === true || userProfile?.verificationStatus === 'verified';
+    const status = isUserVerified ? 'verified' : (userProfile?.verificationStatus || 'unverified');
+    const isVerified = isUserVerified;
+    const isPending = !isVerified && status === 'pending';
+    const isRejected = !isVerified && status === 'rejected';
 
     return (
       <div className="space-y-8">
@@ -599,9 +601,12 @@ const EmployerOnboarding = () => {
     }
   };
 
-  const isPending = userProfile?.verificationStatus === 'pending';
-  const isRejected = userProfile?.verificationStatus === 'rejected';
-  const isFormVisible = (userProfile?.verificationStatus === 'unverified' || !userProfile?.verificationStatus || isEditing || isRejected) && !isPending;
+  const isUserVerified = userProfile?.isVerified === true || userProfile?.verificationStatus === 'verified';
+  const status = isUserVerified ? 'verified' : (userProfile?.verificationStatus || 'unverified');
+  const isVerified = isUserVerified;
+  const isPending = !isVerified && status === 'pending';
+  const isRejected = !isVerified && status === 'rejected';
+  const isFormVisible = (status === 'unverified' || !userProfile?.verificationStatus || isEditing || isRejected) && !isPending;
 
   const handleRevoke = async () => {
     if (!userProfile?.id) return;

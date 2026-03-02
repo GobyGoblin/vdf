@@ -175,11 +175,12 @@ export const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar-hide">
           {navigation.map((item) => {
+            const isUserVerified = user?.isVerified === true || user?.verificationStatus === 'verified';
             const employerRestricted = user?.role === 'employer' &&
-              user?.verificationStatus !== 'verified' &&
+              !isUserVerified &&
               ['Candidate Pipeline', 'Talent Pool', 'Talent Demands', 'My Quotes', 'Interviews'].includes(item.name);
             const candidateRestricted = user?.role === 'candidate' &&
-              user?.verificationStatus !== 'verified' &&
+              !isUserVerified &&
               ['Interviews'].includes(item.name);
             const isRestricted = employerRestricted || candidateRestricted;
 
@@ -256,17 +257,36 @@ export const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
               </button>
             </div>
             <nav className="px-3 py-4 space-y-1">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`sidebar-nav-item ${isActive(item.href) ? 'active' : ''}`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="text-sm font-medium">{item.name}</span>
-                </Link>
-              ))}
+              {navigation.map((item) => {
+                const isUserVerified = user?.isVerified === true || user?.verificationStatus === 'verified';
+                const employerRestricted = user?.role === 'employer' &&
+                  !isUserVerified &&
+                  ['Candidate Pipeline', 'Talent Pool', 'Talent Demands', 'My Quotes', 'Interviews'].includes(item.name);
+                const candidateRestricted = user?.role === 'candidate' &&
+                  !isUserVerified &&
+                  ['Interviews'].includes(item.name);
+                const isRestricted = employerRestricted || candidateRestricted;
+
+                return (
+                  <div key={item.name} className="relative group">
+                    <Link
+                      to={isRestricted ? '#' : item.href}
+                      onClick={(e) => {
+                        if (isRestricted) {
+                          e.preventDefault();
+                        } else {
+                          setSidebarOpen(false);
+                        }
+                      }}
+                      className={`sidebar-nav-item ${isActive(item.href) ? 'active' : ''} ${isRestricted ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span className="text-sm font-medium">{item.name}</span>
+                      {isRestricted && <Shield className="w-3.5 h-3.5 ml-auto text-gold shrink-0 transition-transform group-hover:scale-110" />}
+                    </Link>
+                  </div>
+                );
+              })}
             </nav>
           </aside>
         </div>
