@@ -401,6 +401,11 @@ export const staffAPI = {
     return response.data;
   },
 
+  updateEmployerStep: async (id: string, step: string) => {
+    const response = await apiClient.put(`staff/employers/${id}/step`, { step });
+    return response.data;
+  },
+
   addDomain: async (domainData: any) => {
     const response = await apiClient.post('staff/domains', domainData);
     return response.data;

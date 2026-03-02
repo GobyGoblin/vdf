@@ -42,6 +42,8 @@ export const User = sequelize.define('User', {
     type: DataTypes.ENUM('unpaid', 'pending', 'paid'),
     defaultValue: 'unpaid'
   },
+  verificationPlan: { type: DataTypes.STRING, defaultValue: 'free' },
+  verificationStep: { type: DataTypes.STRING, defaultValue: 'Registration Submitted' },
   profileProgress: { type: DataTypes.INTEGER, defaultValue: 0 },
   suggestedPlacementCost: { type: DataTypes.STRING, allowNull: true },
   avatarUrl: { type: DataTypes.STRING, allowNull: true },

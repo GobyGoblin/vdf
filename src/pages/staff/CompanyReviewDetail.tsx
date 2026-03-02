@@ -90,6 +90,19 @@ const CompanyReviewDetail = () => {
         }
     };
 
+    const handleUpdateStep = async (step: string) => {
+        setSubmitting(true);
+        try {
+            const res = await staffAPI.updateEmployerStep(company.id, step);
+            setCompany(res.employer);
+            toast({ title: 'Success', description: 'Progress updated successfully' });
+        } catch (error) {
+            toast({ title: 'Error', description: 'Failed to update progress', variant: 'destructive' });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     if (loading) {
         return (
             <DashboardLayout role="staff">
@@ -248,6 +261,24 @@ const CompanyReviewDetail = () => {
                     <div className="lg:w-80 space-y-6">
                         <div className="card-premium p-6 sticky top-24">
                             <h3 className="font-bold text-foreground mb-4">Verification Actions</h3>
+
+                            {company.verificationStatus === 'pending' && (
+                                <div className="mb-6 space-y-3 pb-6 border-b border-border">
+                                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Update Tracker</p>
+                                    <select
+                                        value={company.verificationStep || 'Registration Submitted'}
+                                        onChange={(e) => handleUpdateStep(e.target.value)}
+                                        disabled={submitting}
+                                        className="w-full px-4 py-3 rounded-xl border border-border bg-background outline-none text-sm focus:border-gold transition-colors font-medium text-foreground"
+                                    >
+                                        <option value="Registration Submitted">Registration Submitted</option>
+                                        <option value="Document Review">Document Review</option>
+                                        <option value="Legal & Identity Check">Legal & Identity Check</option>
+                                        <option value="Finalizing Verification">Finalizing Verification</option>
+                                    </select>
+                                </div>
+                            )}
+
                             <div className="space-y-4">
                                 <button
                                     onClick={handleVerify}

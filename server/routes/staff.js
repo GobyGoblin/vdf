@@ -176,6 +176,31 @@ router.put('/employers/:id/verify', async (req, res) => {
     }
 });
 
+// ── Update Employer Progress Step ────────────────────────────────────────
+router.put('/employers/:id/step', async (req, res) => {
+    try {
+        const { step } = req.body;
+        const user = await User.findByPk(req.params.id);
+        if (!user || user.role !== 'employer') return res.status(404).json({ error: 'Employer not found' });
+
+        await user.update({ verificationStep: step });
+
+        await AuditLog.create({
+            userId: req.user.id,
+            action: 'EMPLOYER_VERIFICATION_STEP_UPDATE',
+            details: `Updated employer ${user.companyName} verification step to: ${step}`,
+            ipAddress: req.ip,
+        });
+
+        const result = user.toJSON();
+        delete result.password;
+        res.json({ employer: result });
+    } catch (err) {
+        console.error('Update employer step error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // ── All candidate-employer relations (pipeline overview) ───────────────
 router.get('/relations', async (req, res) => {
     try {

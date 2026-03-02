@@ -166,12 +166,14 @@ router.put('/employer/:id', authenticate, authorize('employer'), async (req, res
     const {
       companyName, companyDescription, website, phone, address, city, country, industry, companySize,
       firstName, lastName, vision, foundedYear, contactEmail, societyType, registerNumber, isTrainingCompany,
-      verificationStatus
+      verificationStatus, verificationPlan, verificationStep
     } = req.body;
 
     if (firstName !== undefined) user.firstName = firstName;
     if (lastName !== undefined) user.lastName = lastName;
     if (verificationStatus !== undefined) user.verificationStatus = verificationStatus;
+    if (verificationPlan !== undefined) user.verificationPlan = verificationPlan;
+    if (verificationStep !== undefined) user.verificationStep = verificationStep;
 
     if (companyName !== undefined) {
       user.companyName = companyName;

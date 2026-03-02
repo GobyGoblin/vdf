@@ -186,6 +186,33 @@ const EmployerDashboard = () => {
               </div>
             </div>
 
+            {/* Tracking Progress Steps for pending */}
+            {isPending && (
+              <div className="mt-6 pt-6 border-t border-gold/10">
+                <p className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-4">Verification Process Tracking</p>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-success text-white flex items-center justify-center font-bold text-[10px]">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <span className="text-foreground font-medium">Submitted</span>
+                  </div>
+                  <div className="hidden sm:block flex-1 h-px bg-success/50" />
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-gold text-navy flex items-center justify-center font-bold text-[10px]">
+                      <Clock className="w-3 h-3 animate-spin-slow" />
+                    </div>
+                    <span className="text-foreground font-medium">{user?.verificationStep || 'Review in Progress'}</span>
+                  </div>
+                  <div className="hidden sm:block flex-1 h-px bg-border border-dashed" />
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-secondary text-muted-foreground flex items-center justify-center font-bold text-[10px]">3</div>
+                    <span>Final Approval</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Progress Steps for unverified */}
             {!isPending && !isRejected && (
               <div className="mt-6 pt-6 border-t border-gold/10">
