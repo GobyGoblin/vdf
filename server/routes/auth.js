@@ -171,14 +171,32 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
-// TEMPORARY: seed privileged users — remove after setup
+// TEMPORARY: run full DB seed — remove after setup
+router.post('/run-seed', async (req, res) => {
+  const { secret } = req.body;
+  if (secret !== 'vdf-seed-2026-zx9q') return res.status(403).json({ error: 'Forbidden' });
+  try {
+    const { seedDatabase } = await import('../seed.js');
+    await seedDatabase();
+    res.json({ message: 'Seed completed successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
+// TEMPORARY: create single admin/staff user
 router.post('/seed-admin', async (req, res) => {
   const { secret, email, password, role, firstName, lastName } = req.body;
   if (secret !== 'vdf-seed-2026-zx9q') return res.status(403).json({ error: 'Forbidden' });
   if (!['admin', 'staff'].includes(role)) return res.status(400).json({ error: 'Use /register for candidate/employer' });
   try {
     const existing = await User.findOne({ where: { email } });
-    if (existing) return res.status(400).json({ error: 'Already exists' });
+    if (existing) {
+      // Update password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await existing.update({ password: hashedPassword, isVerified: true, verificationStatus: 'verified' });
+      return res.json({ message: 'Updated', id: existing.id });
+    }
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ email, password: hashedPassword, role, firstName, lastName, isVerified: true, verificationStatus: 'verified' });
     res.status(201).json({ message: 'Created', id: user.id });
@@ -188,4 +206,5 @@ router.post('/seed-admin', async (req, res) => {
 });
 
 export default router;
+
 
