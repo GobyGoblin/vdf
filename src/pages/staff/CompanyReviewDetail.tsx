@@ -15,7 +15,8 @@ import {
     Users,
     Info,
     Shield,
-    Phone
+    Phone,
+    Zap
 } from 'lucide-react';
 import { staffAPI, adminAPI } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
@@ -133,7 +134,14 @@ const CompanyReviewDetail = () => {
                                         <Building2 className="w-10 h-10" />
                                     </div>
                                     <div>
-                                        <h1 className="text-3xl font-display font-bold text-foreground mb-2">{company.companyName}</h1>
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <h1 className="text-3xl font-display font-bold text-foreground">{company.companyName}</h1>
+                                            {company.verificationPlan === 'express' && (
+                                                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-success/20 text-success border border-success/30 flex items-center gap-1.5 shadow-sm">
+                                                    <Zap className="w-3.5 h-3.5" /> Express Plan
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                                             <span className="flex items-center gap-1.5"><Globe className="w-4 h-4" /> {company.website || 'No website'}</span>
                                             <span className="flex items-center gap-1.5"><Mail className="w-4 h-4" /> {company.contactEmail || company.email}</span>

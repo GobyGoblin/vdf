@@ -12,7 +12,8 @@ import {
   Calendar,
   ArrowRight,
   Shield,
-  Building2
+  Building2,
+  Zap
 } from 'lucide-react';
 import { staffAPI, adminAPI, profilesAPI } from '@/lib/api';
 
@@ -238,7 +239,14 @@ const StaffReviewQueue = () => {
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center text-gold font-bold"><Building2 className="w-5 h-5" /></div>
                             <div>
-                              <p className="font-medium text-foreground">{company.companyName}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-foreground">{company.companyName}</p>
+                                {company.verificationPlan === 'express' && (
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-success/20 text-success border border-success/30 flex items-center gap-1">
+                                    <Zap className="w-3 h-3" /> Express
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-muted-foreground">{company.industry || 'Industry not specified'}</p>
                             </div>
                           </div>
