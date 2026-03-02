@@ -18,7 +18,9 @@ import {
   Edit3,
   XCircle,
   Loader2,
-  RotateCcw
+  RotateCcw,
+  Zap,
+  Shield
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { authAPI, profilesAPI } from '@/lib/api';
@@ -41,6 +43,7 @@ const EmployerOnboarding = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const { isOpen, options, showDialog, closeDialog } = useCustomDialog();
+  const [selectedPlan, setSelectedPlan] = useState<'free' | 'paid' | null>(null);
   const [formData, setFormData] = useState({
     companyName: '',
     industry: '',
@@ -115,6 +118,11 @@ const EmployerOnboarding = () => {
   };
 
   const handleBack = () => {
+    if (currentStep === 4 && selectedPlan) {
+      setSelectedPlan(null);
+      window.scrollTo(0, 0);
+      return;
+    }
     if (currentStep > 1) {
       setCurrentStep(prev => prev - 1);
       window.scrollTo(0, 0);
@@ -128,7 +136,8 @@ const EmployerOnboarding = () => {
       if (user && user.id) {
         await profilesAPI.updateEmployerProfile(user.id, {
           ...formData,
-          verificationStatus: 'pending'
+          verificationStatus: 'pending',
+          verificationPlan: selectedPlan || 'free'
         });
       }
 
@@ -535,9 +544,72 @@ const EmployerOnboarding = () => {
           </motion.div>
         );
       case 4:
+        if (!selectedPlan) {
+          return (
+            <motion.div
+              key="step4-plans"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-8 py-4"
+            >
+              <div className="text-center space-y-2">
+                <h2 className="text-3xl font-display font-bold text-foreground">Choose Your Verification Plan</h2>
+                <p className="text-muted-foreground max-w-xl mx-auto">
+                  Legally review and verify your company entity to access candidate placement. Select your preferred processing speed.
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                {/* Standard Plan */}
+                <div onClick={() => setSelectedPlan('free')} className="card-premium p-8 border-2 border-border/50 hover:border-gold/30 hover:bg-secondary/20 transition-all flex flex-col cursor-pointer group">
+                  <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground mb-6 group-hover:scale-110 transition-transform">
+                    <Shield className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-2xl font-display font-bold text-foreground">Standard Verification</h3>
+                  <div className="my-4">
+                    <span className="text-4xl font-bold font-display">Free</span>
+                  </div>
+                  <ul className="space-y-4 flex-1 mb-8">
+                    <li className="flex gap-3 text-sm text-muted-foreground"><CheckCircle2 className="w-5 h-5 text-success shrink-0" /> Thorough manual review process</li>
+                    <li className="flex gap-3 text-sm text-muted-foreground"><CheckCircle2 className="w-5 h-5 text-success shrink-0" /> Processed within 24-48 hours</li>
+                    <li className="flex gap-3 text-sm text-muted-foreground"><CheckCircle2 className="w-5 h-5 text-success shrink-0" /> Full platform access upon approval</li>
+                  </ul>
+                  <button className="w-full py-4 rounded-xl border-2 border-border font-bold text-muted-foreground group-hover:bg-navy group-hover:text-white group-hover:border-navy transition-all">
+                    Select Standard
+                  </button>
+                </div>
+
+                {/* Express Plan */}
+                <div onClick={() => navigate('/employer/verification-payment', { state: { plan: 'express', companyData: formData } })} className="card-premium p-8 border-2 border-gold relative bg-white shadow-xl shadow-gold/10 hover:-translate-y-1 transition-all flex flex-col cursor-pointer">
+                  <div className="absolute top-0 right-8 px-4 py-1.5 -translate-y-1/2 bg-gold text-navy text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">
+                    Recommended
+                  </div>
+                  <div className="w-16 h-16 rounded-2xl bg-gold text-navy flex items-center justify-center mb-6">
+                    <Zap className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-2xl font-display font-bold text-foreground">Express Verification</h3>
+                  <div className="my-4 flex items-end gap-2">
+                    <span className="text-4xl font-bold font-display text-navy">€99</span>
+                    <span className="text-muted-foreground pb-1 font-bold">.00</span>
+                  </div>
+                  <ul className="space-y-4 flex-1 mb-8">
+                    <li className="flex gap-3 text-sm text-foreground font-medium"><CheckCircle2 className="w-5 h-5 text-gold shrink-0" /> Priority expedited processing</li>
+                    <li className="flex gap-3 text-sm text-foreground font-medium"><CheckCircle2 className="w-5 h-5 text-gold shrink-0" /> Completed instantly or under 2 hours</li>
+                    <li className="flex gap-3 text-sm text-foreground font-medium"><CheckCircle2 className="w-5 h-5 text-gold shrink-0" /> Immediate talent access</li>
+                    <li className="flex gap-3 text-sm text-foreground font-medium"><CheckCircle2 className="w-5 h-5 text-gold shrink-0" /> 100% Refundable if rejected</li>
+                  </ul>
+                  <button className="w-full py-4 rounded-xl bg-gold text-navy font-bold shadow-lg shadow-gold/20 hover:shadow-gold/40 transition-all">
+                    Select Express
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          );
+        }
+
         return (
           <motion.div
-            key="step4"
+            key="step4-summary"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="text-center space-y-6 py-8"
@@ -752,24 +824,26 @@ const EmployerOnboarding = () => {
                 </button>
 
                 {currentStep === steps.length ? (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={submitting}
-                    className="flex items-center gap-2 px-8 py-3 rounded-xl btn-gold font-bold shadow-lg shadow-gold/20 hover:shadow-gold/40 transition-all disabled:opacity-50"
-                  >
-                    {submitting ? (
-                      <>
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-                          <Clock className="w-4 h-4" />
-                        </motion.div>
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        Complete Onboarding <CheckCircle2 className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
+                  !selectedPlan ? <div /> : (
+                    <button
+                      onClick={handleSubmit}
+                      disabled={submitting}
+                      className="flex items-center gap-2 px-8 py-3 rounded-xl btn-gold font-bold shadow-lg shadow-gold/20 hover:shadow-gold/40 transition-all disabled:opacity-50"
+                    >
+                      {submitting ? (
+                        <>
+                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+                            <Clock className="w-4 h-4" />
+                          </motion.div>
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          Complete Onboarding <CheckCircle2 className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  )
                 ) : (
                   <button
                     onClick={handleNext}

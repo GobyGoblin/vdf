@@ -13,6 +13,7 @@ export interface User {
     badgeType?: 'gold' | 'blue' | 'none';
     verificationPaymentStatus?: 'pending' | 'paid' | 'waived';
     selectedPlanId?: string;
+    verificationPlan?: string;
     industry?: string;
     website?: string;
     companySize?: string;

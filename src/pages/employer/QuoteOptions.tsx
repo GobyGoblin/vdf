@@ -57,7 +57,7 @@ const EmployerQuoteOptions = () => {
                 title: 'Option Selected',
                 description: 'You have successfully selected this offer option.',
             });
-            loadData(id);
+            navigate(`/employer/quotes/${id}/payment`);
         } catch (error) {
             toast({
                 title: 'Error',
@@ -70,11 +70,6 @@ const EmployerQuoteOptions = () => {
     };
 
     const selectedOption = request?.options?.find(o => o.selected);
-
-    const handlePaymentRedirect = () => {
-        if (!id) return;
-        navigate(`/employer/quotes/${id}/payment`);
-    };
 
     if (loading) {
         return (
@@ -121,19 +116,6 @@ const EmployerQuoteOptions = () => {
                         </p>
                     </div>
 
-                    {selectedOption && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                        >
-                            <button
-                                onClick={() => setShowMeetingPlanner(true)}
-                                className="flex items-center gap-4 px-10 py-5 rounded-[2rem] bg-navy text-white font-black uppercase tracking-widest text-xs hover:shadow-2xl hover:shadow-navy/20 hover:-translate-y-1 transition-all"
-                            >
-                                <Calendar className="w-5 h-5 text-gold" /> Plan Interview Meeting
-                            </button>
-                        </motion.div>
-                    )}
                 </div>
 
                 {/* Options Grid */}
@@ -205,25 +187,18 @@ const EmployerQuoteOptions = () => {
                                 </div>
 
                                 <div className="mt-8 flex-1 flex flex-col justify-end">
-                                    {option.selected ? (
-                                        <button
-                                            onClick={handlePaymentRedirect}
-                                            className="w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all bg-success text-white hover:shadow-2xl hover:shadow-success/40 hover:-translate-y-1 block text-center"
-                                        >
-                                            Secure Checkout
-                                        </button>
-                                    ) : (
-                                        <button
-                                            disabled={selecting}
-                                            onClick={() => handleSelectOption(option.id)}
-                                            className={cn(
-                                                "w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all",
-                                                "bg-navy text-white hover:bg-gold hover:text-navy hover:shadow-2xl hover:shadow-gold/30 hover:-translate-y-1 block text-center"
-                                            )}
-                                        >
-                                            Select {option.name}
-                                        </button>
-                                    )}
+                                    <button
+                                        disabled={selecting}
+                                        onClick={() => option.selected ? navigate(`/employer/quotes/${id}/payment`) : handleSelectOption(option.id)}
+                                        className={cn(
+                                            "w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all block text-center",
+                                            option.selected
+                                                ? "bg-success text-white hover:shadow-2xl hover:shadow-success/40 hover:-translate-y-1"
+                                                : "bg-navy text-white hover:bg-gold hover:text-navy hover:shadow-2xl hover:shadow-gold/30 hover:-translate-y-1"
+                                        )}
+                                    >
+                                        {option.selected ? "Proceed to Checkout" : `Select ${option.name}`}
+                                    </button>
                                 </div>
                             </div>
                         </motion.div>
