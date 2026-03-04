@@ -44,6 +44,7 @@ import EmployerTalentDemands from "./pages/employer/TalentDemands";
 import EmployerInterviews from "./pages/employer/Interviews";
 import EmployerVerificationPayment from "./pages/employer/VerificationPayment";
 import EmployerHiringTracker from "./pages/employer/HiringTracker";
+import EmployerHiredCandidates from "./pages/employer/HiredCandidates";
 
 // Staff Pages
 import StaffDashboard from "./pages/staff/Dashboard";
@@ -117,6 +118,7 @@ const App = () => (
           <Route path="/employer/quotes/:id/payment" element={<ProtectedRoute allowedRoles={['employer']}><EmployerQuotePayment /></ProtectedRoute>} />
           <Route path="/employer/quotes/:id/receipt" element={<ProtectedRoute allowedRoles={['employer']}><EmployerQuoteReceipt /></ProtectedRoute>} />
           <Route path="/employer/quotes/:id/tracking" element={<ProtectedRoute allowedRoles={['employer']}><EmployerHiringTracker /></ProtectedRoute>} />
+          <Route path="/employer/hired-candidates" element={<ProtectedRoute allowedRoles={['employer']}><EmployerHiredCandidates /></ProtectedRoute>} />
           <Route path="/employer/talent-demands" element={<ProtectedRoute allowedRoles={['employer']}><EmployerTalentDemands /></ProtectedRoute>} />
           <Route path="/employer/interviews" element={<ProtectedRoute allowedRoles={['employer']}><EmployerInterviews /></ProtectedRoute>} />
 
