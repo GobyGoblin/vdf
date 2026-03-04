@@ -22,7 +22,7 @@ import { Link } from 'react-router-dom';
 const EmployerQuotes = () => {
     const [requests, setRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+    const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'awaiting_candidate' | 'candidate_unresponsive'>('all');
     const [user, setUser] = useState<any>(null);
     const [loadingUser, setLoadingUser] = useState(true);
 
@@ -105,7 +105,7 @@ const EmployerQuotes = () => {
                                     </div>
                                     <div>
                                         <p className="text-sm text-muted-foreground">Pending</p>
-                                        <p className="text-2xl font-bold">{requests.filter(r => r.status === 'pending').length}</p>
+                                        <p className="text-2xl font-bold">{requests.filter(r => ['pending', 'awaiting_candidate'].includes(r.status)).length}</p>
                                     </div>
                                 </div>
                             </div>
@@ -127,7 +127,7 @@ const EmployerQuotes = () => {
                                     </div>
                                     <div>
                                         <p className="text-sm text-muted-foreground">Rejected</p>
-                                        <p className="text-2xl font-bold">{requests.filter(r => r.status === 'rejected').length}</p>
+                                        <p className="text-2xl font-bold">{requests.filter(r => ['rejected', 'candidate_unresponsive'].includes(r.status)).length}</p>
                                     </div>
                                 </div>
                             </div>
@@ -145,8 +145,10 @@ const EmployerQuotes = () => {
                                     >
                                         <option value="all">All Requests</option>
                                         <option value="pending">Pending</option>
+                                        <option value="awaiting_candidate">Awaiting Candidate</option>
                                         <option value="approved">Approved</option>
                                         <option value="rejected">Rejected</option>
+                                        <option value="candidate_unresponsive">Candidate Unresponsive</option>
                                     </select>
                                 </div>
                             </div>
@@ -174,7 +176,7 @@ const EmployerQuotes = () => {
                                                 <div className="flex gap-4">
                                                     <div className={cn(
                                                         "p-3 rounded-xl shrink-0 h-fit",
-                                                        req.status === 'pending' ? "bg-warning/10 text-warning" :
+                                                        ['pending', 'awaiting_candidate'].includes(req.status) ? "bg-warning/10 text-warning" :
                                                             req.status === 'approved' ? "bg-success/10 text-success" :
                                                                 "bg-destructive/10 text-destructive"
                                                     )}>
@@ -187,11 +189,11 @@ const EmployerQuotes = () => {
                                                             </h3>
                                                             <span className={cn(
                                                                 "text-[9px] px-2.5 py-1 rounded-full font-black uppercase tracking-widest border h-fit",
-                                                                req.status === 'pending' ? "bg-warning/10 text-warning border-warning/20 shadow-[0_0_10px_rgba(234,179,8,0.1)]" :
+                                                                ['pending', 'awaiting_candidate'].includes(req.status) ? "bg-warning/10 text-warning border-warning/20 shadow-[0_0_10px_rgba(234,179,8,0.1)]" :
                                                                     req.status === 'approved' ? "bg-success/10 text-success border-success/20 shadow-[0_0_10px_rgba(34,197,94,0.1)]" :
                                                                         "bg-destructive/10 text-destructive border-destructive/20"
                                                             )}>
-                                                                {req.status}
+                                                                {req.status.replace('_', ' ')}
                                                             </span>
                                                         </div>
                                                         <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2 text-sm text-muted-foreground font-medium">

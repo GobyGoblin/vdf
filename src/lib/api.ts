@@ -95,10 +95,10 @@ export const authAPI = {
   login: async (email: string, password: string, role?: string) => {
     // Note: Use relative paths without leading slash for Axios baseURL integration
     const response = await apiClient.post('auth/login', { email, password, role });
-    const { token, user } = response.data;
+    const { token, user, reactivated } = response.data;
     setToken(token);
     setCurrentUser(user);
-    return { token, user };
+    return { token, user, reactivated };
   },
 
   register: async (data: {
@@ -391,8 +391,8 @@ export const staffAPI = {
     return response.data;
   },
 
-  resolveQuoteRequest: async (requestId: string, status: 'approved' | 'rejected', costEstimate?: string) => {
-    const response = await apiClient.put(`staff/quote-requests/${requestId}/resolve`, { status, costEstimate });
+  resolveQuoteRequest: async (requestId: string, status: 'approved' | 'rejected' | 'candidate_unresponsive', costEstimate?: string, suggestedCandidateId?: string) => {
+    const response = await apiClient.put(`staff/quote-requests/${requestId}/resolve`, { status, costEstimate, suggestedCandidateId });
     return response.data;
   },
 
@@ -418,6 +418,16 @@ export const staffAPI = {
 
   deleteDomain: async (id: string) => {
     const response = await apiClient.delete(`staff/domains/${id}`);
+    return response.data;
+  },
+
+  getHiringProcesses: async () => {
+    const response = await apiClient.get('staff/hiring');
+    return response.data;
+  },
+
+  updateHiringStep: async (id: string, currentStep: string, steps: any[]) => {
+    const response = await apiClient.put(`staff/hiring/${id}/step`, { currentStep, steps });
     return response.data;
   },
 };

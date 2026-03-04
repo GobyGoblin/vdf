@@ -175,6 +175,21 @@ const StaffDashboard = () => {
                 </div>
                 <ArrowRight className="w-5 h-5 text-muted-foreground" />
               </Link>
+              <Link
+                to="/staff/hiring"
+                className="flex items-center justify-between p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5 text-success" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">Hiring Processes</p>
+                    <p className="text-sm text-muted-foreground">Manage post-purchase relocation steps</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 text-muted-foreground" />
+              </Link>
             </div>
           </motion.div>
 

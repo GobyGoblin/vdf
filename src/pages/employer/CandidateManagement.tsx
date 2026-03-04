@@ -45,6 +45,7 @@ const EmployerCandidateManagement = () => {
     const [schedulerLoading, setSchedulerLoading] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [lockedCandidateIds, setLockedCandidateIds] = useState<Set<string>>(new Set());
+    const [hiredQuoteMap, setHiredQuoteMap] = useState<Map<string, string>>(new Map());
     const { toast } = useToast();
 
     const loadRelations = useCallback(async () => {
@@ -58,10 +59,13 @@ const EmployerCandidateManagement = () => {
 
             // Build a set of candidateIds that have a pending quote → locked in asked_quote
             const pendingIds = new Set<string>();
+            const hiredMap = new Map<string, string>();
             (quotesResp.requests || []).forEach((q: any) => {
                 if (q.status === 'pending') pendingIds.add(q.candidateId);
+                if (q.status === 'paid') hiredMap.set(q.candidateId, q.id);
             });
             setLockedCandidateIds(pendingIds);
+            setHiredQuoteMap(hiredMap);
         } catch (error) {
             console.error('Failed to load relations:', error);
         } finally {
@@ -360,6 +364,17 @@ const EmployerCandidateManagement = () => {
                                                                                             <Video className="w-3 h-3" />
                                                                                             <span className="text-[8px] font-black uppercase tracking-widest">Schedule Interview</span>
                                                                                         </button>
+                                                                                    )}
+
+                                                                                    {rel.status === 'hired' && hiredQuoteMap.get(rel.candidateId) && (
+                                                                                        <Link
+                                                                                            to={`/employer/quotes/${hiredQuoteMap.get(rel.candidateId)}/tracking`}
+                                                                                            onClick={(e) => e.stopPropagation()}
+                                                                                            className="mt-2 text-center block w-full flex items-center justify-center gap-1.5 p-2 rounded-xl bg-gold/10 border border-gold/20 text-gold hover:bg-gold/20 transition-all"
+                                                                                        >
+                                                                                            <Sparkles className="w-3 h-3" />
+                                                                                            <span className="text-[8px] font-black uppercase tracking-widest">Track Hiring Progress</span>
+                                                                                        </Link>
                                                                                     )}
                                                                                 </div>
                                                                             </div>

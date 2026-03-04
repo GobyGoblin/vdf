@@ -14,7 +14,22 @@ const Login = () => {
   const [role, setRole] = useState<'candidate' | 'employer' | 'staff' | 'admin'>('candidate');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showReactivatedPopup, setShowReactivatedPopup] = useState(false);
+  const [loginResult, setLoginResult] = useState<any>(null);
   const navigate = useNavigate();
+
+  const handlePopupClose = () => {
+    setShowReactivatedPopup(false);
+    if (loginResult) {
+      const userRole = loginResult.user.role || role;
+      const path = userRole === 'candidate' ? '/candidate/dashboard'
+        : userRole === 'employer' ? '/employer/dashboard'
+          : userRole === 'staff' ? '/staff/dashboard'
+            : userRole === 'admin' ? '/admin/dashboard'
+              : '/';
+      navigate(path, { state: { user: loginResult.user } });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,13 +55,18 @@ const Login = () => {
           description: 'Logged in successfully',
         });
 
-        const userRole = result.user.role || role;
-        const path = userRole === 'candidate' ? '/candidate/dashboard'
-          : userRole === 'employer' ? '/employer/dashboard'
-            : userRole === 'staff' ? '/staff/dashboard'
-              : userRole === 'admin' ? '/admin/dashboard'
-                : '/';
-        navigate(path, { state: { user: result.user } });
+        if (result.reactivated) {
+          setLoginResult(result);
+          setShowReactivatedPopup(true);
+        } else {
+          const userRole = result.user.role || role;
+          const path = userRole === 'candidate' ? '/candidate/dashboard'
+            : userRole === 'employer' ? '/employer/dashboard'
+              : userRole === 'staff' ? '/staff/dashboard'
+                : userRole === 'admin' ? '/admin/dashboard'
+                  : '/';
+          navigate(path, { state: { user: result.user } });
+        }
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -70,6 +90,31 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-navy flex">
+      {/* Reactivated Modal */}
+      {showReactivatedPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/80 backdrop-blur-sm p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-navy-light p-8 rounded-xl border border-gold/20 max-w-md w-full text-center shadow-2xl"
+          >
+            <div className="w-16 h-16 bg-gold/20 rounded-full flex items-center justify-center mx-auto mb-6 text-gold">
+              <Eye className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-bold text-cream mb-4">Welcome Back!</h2>
+            <p className="text-cream/70 mb-8">
+              Your profile was temporarily deactivated and hidden from employers due to inactivity. By logging in, we've successfully reactivated your profile and you are now visible to the Talent Pool again!
+            </p>
+            <button
+              onClick={handlePopupClose}
+              className="w-full py-3 px-4 bg-gold text-navy font-bold rounded-lg hover:bg-gold-light transition-colors"
+            >
+              Continue to Dashboard
+            </button>
+          </motion.div>
+        </div>
+      )}
+
       {/* Left side - Form */}
       <div className="flex-1 flex items-center justify-center p-8">
         <motion.div

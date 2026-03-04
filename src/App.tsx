@@ -43,6 +43,7 @@ import EmployerQuoteReceipt from "./pages/employer/QuoteReceipt";
 import EmployerTalentDemands from "./pages/employer/TalentDemands";
 import EmployerInterviews from "./pages/employer/Interviews";
 import EmployerVerificationPayment from "./pages/employer/VerificationPayment";
+import EmployerHiringTracker from "./pages/employer/HiringTracker";
 
 // Staff Pages
 import StaffDashboard from "./pages/staff/Dashboard";
@@ -56,6 +57,7 @@ import StaffQuoteRequests from "./pages/staff/QuoteRequests";
 import StaffTalentDemands from './pages/staff/TalentDemands';
 import StaffTalentDemandFulfillment from './pages/staff/TalentDemandFulfillment';
 import StaffCandidatePipeline from './pages/staff/CandidatePipeline';
+import StaffHiringProcesses from './pages/staff/HiringProcesses';
 
 // Shared Pages
 import VideoCallRoom from './pages/shared/VideoCallRoom';
@@ -114,6 +116,7 @@ const App = () => (
           <Route path="/employer/quotes/:id" element={<ProtectedRoute allowedRoles={['employer']}><EmployerQuoteOptions /></ProtectedRoute>} />
           <Route path="/employer/quotes/:id/payment" element={<ProtectedRoute allowedRoles={['employer']}><EmployerQuotePayment /></ProtectedRoute>} />
           <Route path="/employer/quotes/:id/receipt" element={<ProtectedRoute allowedRoles={['employer']}><EmployerQuoteReceipt /></ProtectedRoute>} />
+          <Route path="/employer/quotes/:id/tracking" element={<ProtectedRoute allowedRoles={['employer']}><EmployerHiringTracker /></ProtectedRoute>} />
           <Route path="/employer/talent-demands" element={<ProtectedRoute allowedRoles={['employer']}><EmployerTalentDemands /></ProtectedRoute>} />
           <Route path="/employer/interviews" element={<ProtectedRoute allowedRoles={['employer']}><EmployerInterviews /></ProtectedRoute>} />
 
@@ -130,6 +133,7 @@ const App = () => (
           <Route path="/staff/domains" element={<ProtectedRoute allowedRoles={['staff']}><StaffDomainsManagement /></ProtectedRoute>} />
           <Route path="/staff/quotes" element={<ProtectedRoute allowedRoles={['staff']}><StaffQuoteRequests /></ProtectedRoute>} />
           <Route path="/staff/pipeline" element={<ProtectedRoute allowedRoles={['staff']}><StaffCandidatePipeline /></ProtectedRoute>} />
+          <Route path="/staff/hiring" element={<ProtectedRoute allowedRoles={['staff']}><StaffHiringProcesses /></ProtectedRoute>} />
 
           {/* Admin */}
           <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />

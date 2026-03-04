@@ -10,7 +10,10 @@ import {
     DollarSign,
     User,
     Building2,
-    Calendar
+    Calendar,
+    Phone,
+    Mail,
+    AlertCircle
 } from 'lucide-react';
 import { staffAPI, QuoteRequest } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
@@ -21,7 +24,7 @@ import { motion } from 'framer-motion';
 const QuoteRequests = () => {
     const [requests, setRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'awaiting_candidate' | 'candidate_unresponsive'>('all');
     const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
     const [costEstimate, setCostEstimate] = useState('');
 
@@ -46,7 +49,7 @@ const QuoteRequests = () => {
         }
     };
 
-    const handleResolve = async (requestId: string, status: 'approved' | 'rejected', finalCost?: string) => {
+    const handleResolve = async (requestId: string, status: 'approved' | 'rejected' | 'candidate_unresponsive', finalCost?: string, altCandidateId?: string) => {
         if (status === 'approved' && !finalCost) {
             toast({
                 title: 'Error',
@@ -57,7 +60,7 @@ const QuoteRequests = () => {
         }
 
         try {
-            await staffAPI.resolveQuoteRequest(requestId, status, finalCost || '');
+            await staffAPI.resolveQuoteRequest(requestId, status, finalCost || '', altCandidateId);
             toast({
                 title: 'Success',
                 description: `Request ${status}`,
@@ -137,8 +140,10 @@ const QuoteRequests = () => {
                             >
                                 <option value="all">All Requests</option>
                                 <option value="pending">Pending</option>
+                                <option value="awaiting_candidate">Awaiting Candidate</option>
                                 <option value="approved">Approved</option>
                                 <option value="rejected">Rejected</option>
+                                <option value="candidate_unresponsive">Candidate Unresponsive</option>
                             </select>
                         </div>
                     </div>
@@ -184,6 +189,28 @@ const QuoteRequests = () => {
                                                         <User className="w-4 h-4" />
                                                         Candidate: <span className="text-foreground">{req.candidate?.firstName} {req.candidate?.lastName}</span>
                                                     </div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <Mail className="w-3.5 h-3.5" />
+                                                            {req.candidate?.email}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <Phone className="w-3.5 h-3.5" />
+                                                            {req.candidate?.candidateProfile?.phone || 'No phone'}
+                                                        </div>
+                                                    </div>
+                                                    {req.candidate?.isDeactivated && (
+                                                        <div className="flex items-center gap-2 text-destructive font-bold">
+                                                            <AlertCircle className="w-4 h-4" />
+                                                            Candidate Deactivated (&gt;30 days inactive)
+                                                        </div>
+                                                    )}
+                                                    {req.status === 'awaiting_candidate' && req.reactivationDeadline && (
+                                                        <div className="flex items-center gap-2 text-warning font-bold">
+                                                            <Clock className="w-4 h-4" />
+                                                            SLA Deadline: {formatDistanceToNow(new Date(req.reactivationDeadline), { addSuffix: true })}
+                                                        </div>
+                                                    )}
                                                     <div className="flex items-center gap-2">
                                                         <Calendar className="w-4 h-4" />
                                                         Requested: {formatDistanceToNow(new Date(req.requestedAt), { addSuffix: true })}
@@ -197,7 +224,7 @@ const QuoteRequests = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        {req.status === 'pending' && (
+                                        {['pending', 'awaiting_candidate'].includes(req.status) && (
                                             <button
                                                 onClick={() => setSelectedRequest(selectedRequest?.id === req.id ? null : req)}
                                                 className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium shrink-0"
@@ -229,6 +256,9 @@ const QuoteRequests = () => {
 // Extracted component to handle internal state properly
 const RequestActionPanel = ({ request, onResolve, onCancel, initialCost }: { request: any, onResolve: any, onCancel: any, initialCost: string }) => {
     const [costEstimate, setCostEstimate] = useState(initialCost);
+    const [altCandidate, setAltCandidate] = useState('');
+
+    const isAwaiting = request.status === 'awaiting_candidate';
 
     return (
         <motion.div
@@ -236,21 +266,38 @@ const RequestActionPanel = ({ request, onResolve, onCancel, initialCost }: { req
             animate={{ opacity: 1, height: 'auto' }}
             className="mt-6 pt-6 border-t border-border"
         >
-            <h4 className="font-bold mb-4">Process Request</h4>
+            <h4 className="font-bold mb-4">Process Request {isAwaiting ? '(SLA Escalation)' : ''}</h4>
             <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium mb-1">Cost Estimate</label>
-                    <input
-                        type="text"
-                        placeholder="e.g. €5,000 - €7,000"
-                        value={costEstimate}
-                        onChange={(e) => setCostEstimate(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                        {initialCost ? 'Pre-filled from verification suggestion.' : 'Provide a cost range or fixed price for this placement'}
-                    </p>
-                </div>
+                {isAwaiting ? (
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Suggest Alternative Candidate (Optional)</label>
+                        <input
+                            type="text"
+                            placeholder="Alternative Candidate ID"
+                            value={altCandidate}
+                            onChange={(e) => setAltCandidate(e.target.value)}
+                            className="w-full bg-background border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            If the original candidate is unresponsive, you can suggest an alternative here.
+                        </p>
+                    </div>
+                ) : (
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Cost Estimate</label>
+                        <input
+                            type="text"
+                            placeholder="e.g. €5,000 - €7,000"
+                            value={costEstimate}
+                            onChange={(e) => setCostEstimate(e.target.value)}
+                            className="w-full bg-background border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            {initialCost ? 'Pre-filled from verification suggestion.' : 'Provide a cost range or fixed price for this placement'}
+                        </p>
+                    </div>
+                )}
+
                 <div className="flex justify-end gap-3">
                     <button
                         onClick={onCancel}
@@ -259,18 +306,20 @@ const RequestActionPanel = ({ request, onResolve, onCancel, initialCost }: { req
                         Cancel
                     </button>
                     <button
-                        onClick={() => onResolve(request.id, 'rejected')}
+                        onClick={() => onResolve(request.id, isAwaiting ? 'candidate_unresponsive' : 'rejected', undefined, altCandidate)}
                         className="px-4 py-2 border border-destructive/30 text-destructive rounded-lg hover:bg-destructive/10 transition-colors text-sm font-medium"
                     >
-                        Reject Request
+                        {isAwaiting ? (altCandidate ? 'Suggest Alternative' : 'Mark Unresponsive') : 'Reject Request'}
                     </button>
-                    <button
-                        onClick={() => onResolve(request.id, 'approved', costEstimate)}
-                        className="px-4 py-2 bg-success text-white rounded-lg hover:brightness-110 transition-colors text-sm font-medium flex items-center gap-2"
-                    >
-                        <CheckCircle2 className="w-4 h-4" />
-                        Approve & Send Quote
-                    </button>
+                    {!isAwaiting && (
+                        <button
+                            onClick={() => onResolve(request.id, 'approved', costEstimate)}
+                            className="px-4 py-2 bg-success text-white rounded-lg hover:brightness-110 transition-colors text-sm font-medium flex items-center gap-2"
+                        >
+                            <CheckCircle2 className="w-4 h-4" />
+                            Approve & Send Quote
+                        </button>
+                    )}
                 </div>
             </div>
         </motion.div>

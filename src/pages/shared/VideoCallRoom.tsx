@@ -44,7 +44,7 @@ const VideoCallRoom = () => {
         navigate(-1);
     };
 
-    const jitsiUrl = `https://meet.jit.si/${meetingId}#userInfo.displayName="${encodeURIComponent(user?.firstName ? `${user.firstName} ${user.lastName}` : 'Participant')}"`;
+    const jitsiUrl = `https://meet.ffmuc.net/${meetingId}#userInfo.displayName="${encodeURIComponent(user?.firstName ? `${user.firstName} ${user.lastName}` : 'Participant')}"`;
 
     if (loading) {
         return (
