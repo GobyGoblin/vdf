@@ -44,7 +44,10 @@ app.use((req, res, next) => {
 
 // ─── Security Middleware ───────────────────────────────────────────────
 // Helmet: sets various HTTP headers to help protect the app
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false
+}));
 
 // CORS: allow frontend origins (empty or * = allow all for easier deploy)
 const corsOrigin = (process.env.CORS_ORIGIN || '').trim();
@@ -55,9 +58,9 @@ const allowedOrigins = corsOrigin === '*' || !corsOrigin
 app.use(cors({
   origin: Array.isArray(allowedOrigins)
     ? (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-        else callback(new Error('Not allowed by CORS'));
-      }
+      if (!origin || allowedOrigins.includes(origin)) callback(null, true);
+      else callback(new Error('Not allowed by CORS'));
+    }
     : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -78,7 +81,8 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const uploadsPath = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, 'uploads');
+app.use('/uploads', express.static(uploadsPath));
 
 // ─── Routes ────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
@@ -179,18 +183,28 @@ const startServer = async () => {
       }
     }
 
-    app.listen(PORT, () => {
-      console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-      console.log(`📡 API: http://localhost:${PORT}/api`);
-      console.log(`🔒 CORS origins: ${Array.isArray(allowedOrigins) ? allowedOrigins.join(', ') : '(any)'}`);
-      console.log(`🛡️  Environment: ${process.env.NODE_ENV || 'development'}\n`);
-    });
+    if (!process.env.VERCEL) {
+      app.listen(PORT, () => {
+        console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+        console.log(`📡 API: http://localhost:${PORT}/api`);
+        console.log(`🔒 CORS origins: ${Array.isArray(allowedOrigins) ? allowedOrigins.join(', ') : '(any)'}`);
+        console.log(`🛡️  Environment: ${process.env.NODE_ENV || 'development'}\n`);
+      });
+    } else {
+      console.log('✅ Serverless backend initialized for Vercel');
+    }
   } catch (error) {
     console.error('❌ Unable to start server:', error);
-    process.exit(1);
+    if (!process.env.VERCEL) {
+      process.exit(1);
+    }
+    throw error;
   }
 };
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
 
+export { startServer };
 export default app;
