@@ -291,7 +291,7 @@ export const QuoteRequest = sequelize.define('QuoteRequest', {
     references: { model: 'Users', key: 'id' },
   },
   status: {
-    type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+    type: DataTypes.ENUM('pending', 'approved', 'rejected', 'paid'),
     defaultValue: 'pending',
   },
   requestedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
@@ -300,6 +300,7 @@ export const QuoteRequest = sequelize.define('QuoteRequest', {
   items: { type: DataTypes.JSON, defaultValue: [] },
   options: { type: DataTypes.JSON, defaultValue: [] },
   selectedOptionId: { type: DataTypes.STRING, allowNull: true },
+  hiringProcess: { type: DataTypes.JSON, allowNull: true },
 }, { timestamps: true });
 
 // ─── Talent Demand Model ───────────────────────────────────────────────
