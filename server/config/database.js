@@ -10,12 +10,25 @@ import 'pg-hstore';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const storagePath = process.env.VERCEL ? '/tmp/database.sqlite' : path.join(__dirname, '../database.sqlite');
+let sequelize;
 
-const sequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage: storagePath,
-  logging: false,
-});
+if (process.env.DATABASE_URL) {
+  // Production: use PostgreSQL (Neon)
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    dialectOptions: {
+      ssl: { rejectUnauthorized: false },
+    },
+    logging: false,
+  });
+} else {
+  // Local dev: use SQLite
+  const storagePath = path.join(__dirname, '../database.sqlite');
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: storagePath,
+    logging: false,
+  });
+}
 
 export default sequelize;
