@@ -2,8 +2,9 @@ import axios from 'axios';
 import { User, Job, Application, Document as DocType, Insight, AuditLog, QuoteRequest, Plan, TalentDemand, CandidateStatus, QuoteOption, InterviewMeeting, ProposedTime } from './mockData';
 export type { QuoteRequest, Plan, AuditLog, TalentDemand, CandidateStatus, QuoteOption, InterviewMeeting, ProposedTime };
 
-// Use VITE_API_URL in production (e.g. '' for same-origin, or full URL for separate API)
-const API_URL = import.meta.env.VITE_API_URL ?? 'https://vdf-111l.vercel.app/api';
+// Local dev: VITE_API_URL=http://localhost:3001/api  (from .env)
+// Production: VITE_API_URL= (empty, from .env.production) → falls back to same-origin /api
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 const BASE_URL = API_URL ? API_URL.replace(/\/api\/?$/, '') : '';
 const API_BASE = API_URL || '/api';
 

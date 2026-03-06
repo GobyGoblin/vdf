@@ -86,7 +86,7 @@ const AdminUsers = () => {
             lastName: '',
             email: '',
             password: '',
-            role: 'staff',
+            role: 'candidate',
             companyName: ''
         });
         setIsModalOpen(true);
