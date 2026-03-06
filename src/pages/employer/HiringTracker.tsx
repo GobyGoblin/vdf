@@ -65,8 +65,8 @@ const HiringTracker = () => {
                     <p className="text-muted-foreground mb-8">
                         The hiring tracking for this candidate has not started yet or the request is invalid.
                     </p>
-                    <Link to="/employer/quotes" className="text-gold font-bold hover:underline">
-                        Return to Quotes
+                    <Link to="/employer/hired-candidates" className="text-gold font-bold hover:underline">
+                        Return to Hired Candidates
                     </Link>
                 </div>
             </DashboardLayout>
@@ -79,8 +79,8 @@ const HiringTracker = () => {
     return (
         <DashboardLayout role="employer">
             <div className="max-w-4xl mx-auto space-y-8 pb-12">
-                <Link to="/employer/quotes" className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-gold transition-colors">
-                    <ArrowLeft className="w-4 h-4" /> Back to My Quotes
+                <Link to="/employer/hired-candidates" className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-gold transition-colors">
+                    <ArrowLeft className="w-4 h-4" /> Back to Hired Candidates
                 </Link>
 
                 <div className="flex items-center justify-between">

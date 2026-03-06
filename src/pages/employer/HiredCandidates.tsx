@@ -78,49 +78,78 @@ const EmployerHiredCandidates = () => {
                         <p className="text-muted-foreground mt-2">After you accept and pay for a quote, candidate onboarding tracking will appear here.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filtered.map(quote => {
+                    <div className="space-y-4">
+                        {filtered.map((quote, index) => {
                             const hp = quote.hiringProcess;
+
+                            // Calculate progress percentage
+                            const steps = hp?.steps || [];
+                            const totalSteps = steps.length || 5;
+                            const completedSteps = steps.filter((s: any) => s.status === 'done').length;
+                            const progressPercent = hp ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
                             return (
-                                <motion.div key={quote.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="card-premium flex flex-col h-full overflow-hidden hover:border-gold/30 hover:shadow-xl transition-all group">
-                                    <div className="p-6 flex-1 flex flex-col">
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-navy/5 flex items-center justify-center text-xl font-black text-gold border border-gold/10 overflow-hidden shrink-0">
-                                                    {quote.candidate?.avatarUrl ? (
-                                                        <img src={quote.candidate.avatarUrl} alt="" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        quote.candidate?.fullName?.charAt(0) || 'C'
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-bold text-lg text-foreground group-hover:text-gold transition-colors truncate w-40">{quote.candidate?.fullName}</h3>
-                                                    <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{quote.candidate?.sector || 'Verified Pro'}</p>
-                                                </div>
+                                <motion.div
+                                    key={quote.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    className="card-premium p-0 overflow-hidden hover:border-gold/30 hover:shadow-xl transition-all group group-hover:bg-secondary/20"
+                                >
+                                    <div className="p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-6">
+                                        {/* Profile Section */}
+                                        <div className="flex items-center gap-5 md:w-1/4 shrink-0">
+                                            <div className="w-16 h-16 rounded-full bg-navy/5 flex items-center justify-center text-2xl font-black text-gold border-2 border-gold/20 overflow-hidden shadow-inner">
+                                                {quote.candidate?.avatarUrl ? (
+                                                    <img src={quote.candidate.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    quote.candidate?.fullName?.charAt(0) || 'C'
+                                                )}
                                             </div>
-                                            {hp?.currentStep === 'completed' && (
-                                                <span className="px-2 py-1 rounded bg-success/10 text-success text-[10px] font-black uppercase tracking-widest border border-success/20">
-                                                    Completed
-                                                </span>
-                                            )}
+                                            <div>
+                                                <h3 className="font-bold text-xl text-foreground group-hover:text-gold transition-colors">{quote.candidate?.fullName}</h3>
+                                                <p className="text-sm font-medium text-muted-foreground">{quote.candidate?.sector || 'Verified Professional'}</p>
+                                            </div>
                                         </div>
 
-                                        <div className="mt-auto space-y-4 pt-4 border-t border-border/50">
-                                            <div className="flex items-center justify-between text-sm">
-                                                <span className="text-muted-foreground flex items-center gap-1"><Clock className="w-4 h-4" /> Started</span>
-                                                <span className="font-semibold">{formatDistanceToNow(new Date(quote.updatedAt), { addSuffix: true })}</span>
+                                        {/* Status & Progress Section */}
+                                        <div className="flex-1 w-full bg-secondary/50 rounded-2xl p-5 border border-border/50">
+                                            <div className="flex items-center justify-between mb-3 text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-navy uppercase tracking-widest text-[10px] px-2 py-1 bg-white rounded-md border shadow-sm">Current Status</span>
+                                                    <span className="font-bold capitalize text-foreground flex items-center gap-2">
+                                                        {hp ? hp.currentStep?.replace('_', ' ') : 'Pending Setup...'}
+                                                        {hp?.currentStep === 'completed' && <CheckCircle2 className="w-4 h-4 text-success" />}
+                                                    </span>
+                                                </div>
+                                                <span className="font-black text-gold text-lg">{progressPercent}%</span>
                                             </div>
-                                            <div className="flex items-center justify-between text-sm bg-secondary p-3 rounded-xl border border-border/50">
-                                                <span className="text-muted-foreground flex items-center gap-1"><FileText className="w-4 h-4" /> Status</span>
-                                                <span className="font-bold text-navy capitalize">
-                                                    {hp ? hp.currentStep.replace('_', ' ') : 'Initializing...'}
-                                                </span>
+
+                                            {/* Progress Bar */}
+                                            <div className="h-3 w-full bg-white rounded-full overflow-hidden border shadow-inner">
+                                                <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${progressPercent}%` }}
+                                                    transition={{ duration: 1, delay: 0.2 }}
+                                                    className="h-full bg-gold relative"
+                                                >
+                                                    <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                                                </motion.div>
                                             </div>
+
+                                            <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground font-medium">
+                                                <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Started: {formatDistanceToNow(new Date(quote.updatedAt), { addSuffix: true })}</span>
+                                                <span>{completedSteps} of {totalSteps} Steps Completed</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Action Section */}
+                                        <div className="md:w-[200px] shrink-0 mt-4 md:mt-0 flex justify-end">
                                             <Link
                                                 to={`/employer/quotes/${quote.id}/tracking`}
-                                                className="w-full btn-gold justify-between px-4 py-3 group-hover:shadow-lg group-hover:shadow-gold/20"
+                                                className="btn-gold w-full md:w-auto shadow-lg shadow-gold/20 flex items-center justify-center gap-2 py-3 px-6 text-sm font-bold"
                                             >
-                                                View Timeline <ChevronRight className="w-4 h-4" />
+                                                Open Board <ChevronRight className="w-4 h-4" />
                                             </Link>
                                         </div>
                                     </div>
