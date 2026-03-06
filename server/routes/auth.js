@@ -88,34 +88,61 @@ router.post('/login', async (req, res) => {
     }
 
     console.log(`Login attempt for email: ${email}, role: ${role}`);
-    // Prioritize exact role match, but allow fallback ONLY if no role was provided by older clients.
+    // The same email can exist under different roles (composite unique on email+role).
+    // Strategy:
+    //   1. Try exact email+role match (if role provided).
+    //   2. If no match, find all accounts with that email and try password against each.
     let user;
+    let passwordAlreadyVerified = false;
+
     if (role) {
       user = await User.findOne({ where: { email, role } });
-    } else {
-      user = await User.findOne({ where: { email } });
     }
 
     if (!user) {
-      console.log(`User not found: ${email}, role: ${role}`);
+      // Fallback: try all accounts with this email
+      const candidates = await User.findAll({ where: { email } });
+      if (candidates.length === 0) {
+        console.log(`User not found: ${email}`);
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+      for (const candidate of candidates) {
+        if (candidate.password) {
+          try {
+            const matches = await bcrypt.compare(password, candidate.password);
+            if (matches) {
+              user = candidate;
+              passwordAlreadyVerified = true;
+              break;
+            }
+          } catch (e) { /* skip */ }
+        }
+      }
+    }
+
+    if (!user) {
+      console.log(`No matching account for: ${email}`);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const storedPassword = user.password;
-    if (!storedPassword) {
-      console.log(`User ${user.email} has no password set`);
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-    let isValidPassword = false;
-    try {
-      isValidPassword = await bcrypt.compare(password, storedPassword);
-    } catch (compareErr) {
-      console.error('Password compare error:', compareErr.message);
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-    if (!isValidPassword) {
-      console.log(`Invalid password for user: ${user.email}`);
-      return res.status(401).json({ error: 'Invalid email or password' });
+    // If user was found by exact role match, we still need to verify password
+    if (!passwordAlreadyVerified) {
+      const storedPassword = user.password;
+      if (!storedPassword) {
+        console.log(`User ${user.email} has no password set`);
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+      let isValidPassword = false;
+      try {
+        isValidPassword = await bcrypt.compare(password, storedPassword);
+      } catch (compareErr) {
+        console.error('Password compare error:', compareErr.message);
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+      if (!isValidPassword) {
+        console.log(`Invalid password for user: ${user.email}`);
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
     }
 
     // Skip strict role check to avoid 403 errors if user forgot to click the right tab.
