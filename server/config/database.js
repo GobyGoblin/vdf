@@ -2,6 +2,11 @@ import { Sequelize } from 'sequelize';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// Static imports so Vercel's NFT bundler includes them
+import 'sqlite3';
+import 'pg';
+import 'pg-hstore';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

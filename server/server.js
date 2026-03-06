@@ -7,6 +7,10 @@ import sequelize from './config/database.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// Static imports for Vercel bundler
+import bcrypt from 'bcryptjs';
+import { User } from './models/index.js';
+
 // Load env FIRST
 dotenv.config();
 
