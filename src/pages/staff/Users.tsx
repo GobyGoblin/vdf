@@ -20,7 +20,7 @@ import {
     Download,
     ExternalLink
 } from 'lucide-react';
-import { staffAPI, getFileUrl } from '@/lib/api';
+import { staffAPI, getFileUrl, getCurrentUser } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -104,8 +104,9 @@ const StaffUsers = () => {
                 password: 'password123'
             });
             loadUsers();
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to add user', variant: 'destructive' });
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.error || 'Failed to add user';
+            toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
         }
     };
 
@@ -521,7 +522,9 @@ const StaffUsers = () => {
                                             <option value="candidate">Candidate</option>
                                             <option value="employer">Employer</option>
                                             <option value="staff">Staff</option>
-                                            <option value="admin">Admin</option>
+                                            {getCurrentUser()?.role === 'admin' && (
+                                                <option value="admin">Admin</option>
+                                            )}
                                         </select>
                                     </div>
                                     <div className="space-y-1.5">
