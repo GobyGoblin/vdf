@@ -3,32 +3,13 @@ import crypto from 'crypto';
 import { User, QuoteRequest, AuditLog } from '../models/index.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { Op } from 'sequelize';
+import { anonymizeCandidate } from '../utils/anonymize.js';
 
 const router = express.Router();
 router.use(authenticate);
 
-// ── Helper: anonymize candidate for employers ──────────────────────────
-const anonymize = (candidate) => {
-    if (!candidate) return null;
-    const plain = typeof candidate.toJSON === 'function' ? candidate.toJSON() : { ...candidate };
-    plain.fullName = `${plain.firstName || ''} ${plain.lastName || ''}`.trim() || 'Candidate';
-    plain.email = '********@germantalent.de';
-
-    delete plain.password;
-    delete plain.avatarUrl;
-    delete plain.address;
-    delete plain.nationality;
-    delete plain.birthDate;
-
-    if (plain.candidateProfile) {
-        delete plain.candidateProfile.phone;
-        delete plain.candidateProfile.address;
-        delete plain.candidateProfile.city;
-        delete plain.candidateProfile.country;
-    }
-
-    return plain;
-};
+// (Helper moved to server/utils/anonymize.js)
+const anonymize = (candidate, role = 'employer') => anonymizeCandidate(candidate, role);
 
 // ── Create quote request (employer) ────────────────────────────────────
 router.post('/', authorize('employer'), async (req, res) => {
@@ -139,7 +120,7 @@ router.get('/my', authorize('employer'), async (req, res) => {
         });
         const enriched = requests.map(r => {
             const plain = r.toJSON();
-            plain.candidate = anonymize(plain.candidate);
+            plain.candidate = anonymizeCandidate(plain.candidate, req.user.role);
             return plain;
         });
         res.json({ requests: enriched });
@@ -166,9 +147,7 @@ router.get('/:id', async (req, res) => {
         }
 
         const plain = request.toJSON();
-        if (req.user.role === 'employer') {
-            plain.candidate = anonymize(plain.candidate);
-        }
+        plain.candidate = anonymizeCandidate(plain.candidate, req.user.role);
         res.json({ request: plain });
     } catch (err) {
         console.error('Get quote error:', err);

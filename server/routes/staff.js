@@ -4,6 +4,7 @@ import { User, Document, AuditLog, Domain, QuoteRequest, EmployerCandidateRel, C
 import { authenticate, authorize } from '../middleware/auth.js';
 import { Op } from 'sequelize';
 import crypto from 'crypto';
+import { anonymizeCandidate } from '../utils/anonymize.js';
 
 const router = express.Router();
 
@@ -206,15 +207,24 @@ router.get('/relations', async (req, res) => {
     try {
         const relations = await EmployerCandidateRel.findAll({
             include: [
-                { model: User, as: 'candidate', attributes: { exclude: ['password'] } },
+                {
+                    model: User, as: 'candidate',
+                    attributes: { exclude: ['password'] },
+                    include: [{ model: CandidateProfile, as: 'candidateProfile', required: false }]
+                },
                 { model: User, as: 'employer', attributes: ['id', 'firstName', 'companyName'] },
             ],
+            order: [['updatedAt', 'DESC']],
         });
 
         const enriched = relations.map(r => {
-            const plain = r.toJSON();
-            plain.employerName = plain.employer?.companyName || plain.employer?.firstName || 'Unknown';
-            return plain;
+            const rel = r.toJSON();
+
+            // Enrich candidate data using the shared anonymizer
+            rel.candidate = anonymizeCandidate(rel.candidate, req.user.role);
+
+            rel.employerName = rel.employer?.companyName || rel.employer?.firstName || 'Unknown';
+            return rel;
         });
 
         res.json({ relations: enriched });
@@ -366,8 +376,14 @@ router.get('/users/:id', async (req, res) => {
 router.post('/users', async (req, res) => {
     try {
         const hashedPassword = await bcrypt.hash(req.body.password || 'password123', 10);
+        // SECURITY: Only admins can create admin users
+        if (req.user.role === 'staff' && req.body.role === 'admin') {
+            return res.status(403).json({ error: 'Staff members are not authorized to create Admin users. Only Administrators have this permission.' });
+        }
+
         const newUser = await User.create({
             ...req.body,
+            role: req.body.role, // Explicitly set role from request body
             password: hashedPassword,
             isVerified: req.body.role === 'staff' || req.body.role === 'admin',
         });
@@ -376,6 +392,76 @@ router.post('/users', async (req, res) => {
         res.status(201).json({ user: result });
     } catch (err) {
         console.error('Add user error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ── Hiring Processes (Paid Quotes) ─────────────────────────────────────
+router.get('/hiring', async (req, res) => {
+    try {
+        const requests = await QuoteRequest.findAll({
+            where: { status: 'paid' },
+            include: [
+                { model: User, as: 'candidate', attributes: { exclude: ['password'] } },
+                {
+                    model: User, as: 'employer', attributes: { exclude: ['password'] },
+                    include: [{ model: EmployerProfile, as: 'employerProfile' }]
+                },
+            ],
+            order: [['createdAt', 'DESC']],
+        });
+
+        const processes = requests.map(r => {
+            const plain = r.toJSON();
+            const hp = plain.hiringProcess || {};
+
+            // Enrich candidate for staff view
+            const candidate = anonymizeCandidate(plain.candidate, req.user.role);
+
+            return {
+                id: plain.id,
+                startedAt: plain.updatedAt,
+                candidate: candidate,
+                employer: plain.employer,
+                currentStep: hp.currentStep || 'contract',
+                steps: hp.steps || [],
+            };
+        });
+
+        res.json({ processes });
+    } catch (err) {
+        console.error('Hiring processes error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.put('/hiring/:id/step', async (req, res) => {
+    try {
+        const { currentStep, steps } = req.body;
+        const request = await QuoteRequest.findOne({ where: { id: req.params.id, status: 'paid' } });
+
+        if (!request) return res.status(404).json({ error: 'Process not found' });
+
+        const existingHp = request.hiringProcess || {};
+        const updatedHp = {
+            ...existingHp,
+            currentStep: currentStep || existingHp.currentStep,
+            steps: steps || existingHp.steps,
+            updatedAt: new Date().toISOString()
+        };
+
+        await request.update({ hiringProcess: updatedHp });
+
+        await AuditLog.create({
+            userId: req.user.id,
+            action: 'HIRING_STEP_UPDATE',
+            details: `Updated hiring step for process ${request.id}`,
+            ipAddress: req.ip,
+        });
+
+        res.json({ success: true, hiringProcess: updatedHp });
+    } catch (err) {
+        console.error('Update hiring step error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

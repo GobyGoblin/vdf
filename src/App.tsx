@@ -59,6 +59,7 @@ import StaffTalentDemands from './pages/staff/TalentDemands';
 import StaffTalentDemandFulfillment from './pages/staff/TalentDemandFulfillment';
 import StaffCandidatePipeline from './pages/staff/CandidatePipeline';
 import StaffHiringProcesses from './pages/staff/HiringProcesses';
+import StaffHiringTracker from './pages/staff/HiringTracker';
 
 // Shared Pages
 import VideoCallRoom from './pages/shared/VideoCallRoom';
@@ -136,6 +137,7 @@ const App = () => (
           <Route path="/staff/quotes" element={<ProtectedRoute allowedRoles={['staff']}><StaffQuoteRequests /></ProtectedRoute>} />
           <Route path="/staff/pipeline" element={<ProtectedRoute allowedRoles={['staff']}><StaffCandidatePipeline /></ProtectedRoute>} />
           <Route path="/staff/hiring" element={<ProtectedRoute allowedRoles={['staff']}><StaffHiringProcesses /></ProtectedRoute>} />
+          <Route path="/staff/hiring/:id" element={<ProtectedRoute allowedRoles={['staff']}><StaffHiringTracker /></ProtectedRoute>} />
 
           {/* Admin */}
           <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />

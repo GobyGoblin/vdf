@@ -40,43 +40,96 @@ interface DashboardLayoutProps {
   role: UserRole;
 }
 
-const navigationByRole: Record<UserRole, { name: string; href: string; icon: React.ElementType }[]> = {
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+}
+
+interface NavSection {
+  category: string;
+  items: NavItem[];
+}
+
+type NavigationGroup = NavItem | NavSection;
+
+const navigationByRole: Record<UserRole, NavigationGroup[]> = {
   candidate: [
     { name: 'Dashboard', href: '/candidate/dashboard', icon: LayoutDashboard },
-    { name: 'My Profile', href: '/candidate/profile', icon: User },
-    { name: 'Documents', href: '/candidate/documents', icon: FileText },
-    { name: 'Verification', href: '/candidate/review-status', icon: ShieldCheck },
-    { name: 'Verification Plans', href: '/candidate/pricing', icon: CreditCard },
-    { name: 'Interviews', href: '/candidate/interviews', icon: Video },
+    {
+      category: 'Profile & Placement',
+      items: [
+        { name: 'My Profile', href: '/candidate/profile', icon: User },
+        { name: 'Documents', href: '/candidate/documents', icon: FileText },
+        { name: 'Verification', href: '/candidate/review-status', icon: ShieldCheck },
+        { name: 'Verification Plans', href: '/candidate/pricing', icon: CreditCard },
+        { name: 'Interviews', href: '/candidate/interviews', icon: Video },
+      ]
+    },
   ],
   employer: [
     { name: 'Dashboard', href: '/employer/dashboard', icon: LayoutDashboard },
-    { name: 'Candidate Pipeline', href: '/employer/candidates', icon: Users },
-    { name: 'Company Onboarding', href: '/employer/onboarding', icon: Building2 },
-    { name: 'Talent Pool', href: '/employer/talent-pool', icon: Search },
-    { name: 'Hired Profiles', href: '/employer/hired-candidates', icon: CheckCircle2 },
-    { name: 'Talent Demands', href: '/employer/talent-demands', icon: Target },
-    { name: 'My Quotes', href: '/employer/quotes', icon: BadgeEuro },
-    { name: 'Interviews', href: '/employer/interviews', icon: Video },
+    {
+      category: 'Recruitment',
+      items: [
+        { name: 'Candidate Pipeline', href: '/employer/candidates', icon: Users },
+        { name: 'Talent Pool', href: '/employer/talent-pool', icon: Search },
+        { name: 'Talent Demands', href: '/employer/talent-demands', icon: Target },
+        { name: 'My Quotes', href: '/employer/quotes', icon: BadgeEuro },
+      ]
+    },
+    {
+      category: 'Company & Success',
+      items: [
+        { name: 'Hired Profiles', href: '/employer/hired-candidates', icon: CheckCircle2 },
+        { name: 'Interviews', href: '/employer/interviews', icon: Video },
+        { name: 'Company Onboarding', href: '/employer/onboarding', icon: Building2 },
+      ]
+    },
   ],
   staff: [
     { name: 'Dashboard', href: '/staff/dashboard', icon: LayoutDashboard },
-    { name: 'Global Pipeline', href: '/staff/pipeline', icon: Users },
-    { name: 'Review Queue', href: '/staff/review-queue', icon: Clock },
-    { name: 'Quote Requests', href: '/staff/quotes', icon: Calculator },
-    { name: 'Hiring Processes', href: '/staff/hiring', icon: CheckCircle2 },
-    { name: 'Talent Demands', href: '/staff/talent-demands', icon: Target },
-    { name: 'User Directory', href: '/staff/users', icon: Users },
-    { name: 'Domains', href: '/staff/domains', icon: FolderOpen },
+    {
+      category: 'Verifications',
+      items: [
+        { name: 'Review Queue', href: '/staff/review-queue', icon: Clock },
+        { name: 'User Directory', href: '/staff/users', icon: Users },
+      ]
+    },
+    {
+      category: 'Recruitment Management',
+      items: [
+        { name: 'Global Pipeline', href: '/staff/pipeline', icon: Users },
+        { name: 'Quote Requests', href: '/staff/quotes', icon: Calculator },
+        { name: 'Hiring Processes', href: '/staff/hiring', icon: CheckCircle2 },
+        { name: 'Talent Demands', href: '/staff/talent-demands', icon: Target },
+      ]
+    },
+    {
+      category: 'Infrastructure',
+      items: [
+        { name: 'Domains', href: '/staff/domains', icon: FolderOpen },
+      ]
+    },
   ],
   admin: [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-    { name: 'News & Insights', href: '/admin/insights', icon: FileText },
-    { name: 'Employers', href: '/admin/employers', icon: Building2 },
-    { name: 'Workers', href: '/admin/workers', icon: Users },
-    { name: 'Users', href: '/admin/users', icon: Users },
-    { name: 'Audit Log', href: '/admin/audit', icon: FileText },
-    { name: 'Data Retention', href: '/admin/retention', icon: FolderOpen },
+    {
+      category: 'Content & Users',
+      items: [
+        { name: 'News & Insights', href: '/admin/insights', icon: FileText },
+        { name: 'Employers', href: '/admin/employers', icon: Building2 },
+        { name: 'Workers', href: '/admin/workers', icon: Users },
+        { name: 'Users', href: '/admin/users', icon: Users },
+      ]
+    },
+    {
+      category: 'System',
+      items: [
+        { name: 'Audit Log', href: '/admin/audit', icon: FileText },
+        { name: 'Data Retention', href: '/admin/retention', icon: FolderOpen },
+      ]
+    },
   ],
 };
 
@@ -160,6 +213,42 @@ export const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
 
   const isActive = (href: string) => location.pathname === href;
 
+  const renderNavItem = (item: NavItem, user: any, isActive: any, navigate: any, key?: any, onClick?: () => void) => {
+    const isUserVerified = user?.isVerified === true || user?.verificationStatus === 'verified';
+    const employerRestricted = user?.role === 'employer' &&
+      !isUserVerified &&
+      ['Candidate Pipeline', 'Talent Pool', 'Talent Demands', 'My Quotes', 'Interviews'].includes(item.name);
+    const candidateRestricted = user?.role === 'candidate' &&
+      !isUserVerified &&
+      ['Interviews'].includes(item.name);
+    const isRestricted = employerRestricted || candidateRestricted;
+
+    return (
+      <div key={key || item.name} className="relative group">
+        <Link
+          to={isRestricted ? '#' : item.href}
+          onClick={(e) => {
+            if (isRestricted) {
+              e.preventDefault();
+            } else if (onClick) {
+              onClick();
+            }
+          }}
+          className={`sidebar-nav-item ${isActive(item.href) ? 'active' : ''} ${isRestricted ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+        >
+          <item.icon className="w-5 h-5 shrink-0" />
+          <span className="text-sm font-medium truncate">{item.name}</span>
+          {isRestricted && <Shield className="w-3.5 h-3.5 ml-auto text-gold shrink-0 transition-transform group-hover:scale-110" />}
+        </Link>
+        {isRestricted && (
+          <div className="absolute left-full ml-2 top-0 bg-navy text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+            Verified account required
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar - Desktop */}
@@ -175,40 +264,21 @@ export const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
         </Link>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto custom-scrollbar-hide">
-          {navigation.map((item) => {
-            const isUserVerified = user?.isVerified === true || user?.verificationStatus === 'verified';
-            const employerRestricted = user?.role === 'employer' &&
-              !isUserVerified &&
-              ['Candidate Pipeline', 'Talent Pool', 'Talent Demands', 'My Quotes', 'Interviews'].includes(item.name);
-            const candidateRestricted = user?.role === 'candidate' &&
-              !isUserVerified &&
-              ['Interviews'].includes(item.name);
-            const isRestricted = employerRestricted || candidateRestricted;
-
-            return (
-              <div key={item.name} className="relative group">
-                <Link
-                  to={isRestricted ? '#' : item.href}
-                  onClick={(e) => {
-                    if (isRestricted) {
-                      e.preventDefault();
-                      // Could show a toast here
-                    }
-                  }}
-                  className={`sidebar-nav-item ${isActive(item.href) ? 'active' : ''} ${isRestricted ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
-                >
-                  <item.icon className="w-5 h-5 shrink-0" />
-                  <span className="text-sm font-medium truncate">{item.name}</span>
-                  {isRestricted && <Shield className="w-3.5 h-3.5 ml-auto text-gold shrink-0 transition-transform group-hover:scale-110" />}
-                </Link>
-                {isRestricted && (
-                  <div className="absolute left-full ml-2 top-0 bg-navy text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                    Verified account required
+        <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto custom-scrollbar-hide">
+          {navigation.map((group, groupIdx) => {
+            if ('category' in group) {
+              return (
+                <div key={group.category} className="space-y-1">
+                  <h3 className="px-3 text-[10px] font-black uppercase tracking-[0.15em] text-sidebar-foreground/40 mb-2">
+                    {group.category}
+                  </h3>
+                  <div className="space-y-1">
+                    {group.items.map((item) => renderNavItem(item, user, isActive, navigate))}
                   </div>
-                )}
-              </div>
-            );
+                </div>
+              );
+            }
+            return renderNavItem(group, user, isActive, navigate, groupIdx);
           })}
         </nav>
 
@@ -258,36 +328,21 @@ export const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <nav className="px-3 py-4 space-y-1">
-              {navigation.map((item) => {
-                const isUserVerified = user?.isVerified === true || user?.verificationStatus === 'verified';
-                const employerRestricted = user?.role === 'employer' &&
-                  !isUserVerified &&
-                  ['Candidate Pipeline', 'Talent Pool', 'Talent Demands', 'My Quotes', 'Interviews'].includes(item.name);
-                const candidateRestricted = user?.role === 'candidate' &&
-                  !isUserVerified &&
-                  ['Interviews'].includes(item.name);
-                const isRestricted = employerRestricted || candidateRestricted;
-
-                return (
-                  <div key={item.name} className="relative group">
-                    <Link
-                      to={isRestricted ? '#' : item.href}
-                      onClick={(e) => {
-                        if (isRestricted) {
-                          e.preventDefault();
-                        } else {
-                          setSidebarOpen(false);
-                        }
-                      }}
-                      className={`sidebar-nav-item ${isActive(item.href) ? 'active' : ''} ${isRestricted ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
-                    >
-                      <item.icon className="w-5 h-5" />
-                      <span className="text-sm font-medium">{item.name}</span>
-                      {isRestricted && <Shield className="w-3.5 h-3.5 ml-auto text-gold shrink-0 transition-transform group-hover:scale-110" />}
-                    </Link>
-                  </div>
-                );
+            <nav className="px-3 py-4 space-y-6">
+              {navigation.map((group, groupIdx) => {
+                if ('category' in group) {
+                  return (
+                    <div key={group.category} className="space-y-1">
+                      <h3 className="px-3 text-[10px] font-black uppercase tracking-[0.15em] text-sidebar-foreground/40 mb-2">
+                        {group.category}
+                      </h3>
+                      <div className="space-y-1">
+                        {group.items.map((item) => renderNavItem(item, user, isActive, navigate, undefined, () => setSidebarOpen(false)))}
+                      </div>
+                    </div>
+                  );
+                }
+                return renderNavItem(group, user, isActive, navigate, groupIdx, () => setSidebarOpen(false));
               })}
             </nav>
           </aside>

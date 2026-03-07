@@ -2,38 +2,15 @@ import express from 'express';
 import { User, Document, QuoteRequest, EmployerCandidateRel, AuditLog, TalentDemand, CandidateProfile } from '../models/index.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { Op } from 'sequelize';
+import { anonymizeCandidate } from '../utils/anonymize.js';
 
 const router = express.Router();
 
 // All talent pool routes require authentication
 router.use(authenticate);
 
-// ── Helper: anonymize candidate for employers ──────────────────────────
-const anonymize = (candidate) => {
-    if (!candidate) return null;
-    const plain = typeof candidate.toJSON === 'function' ? candidate.toJSON() : { ...candidate };
-
-    // The employer should see the name, but no personal contact/identifying information
-    plain.fullName = `${plain.firstName || ''} ${plain.lastName || ''}`.trim() || 'Candidate';
-    plain.email = '********@germantalent.de';
-
-    // Remove PI from User
-    delete plain.password;
-    delete plain.avatarUrl;
-    delete plain.address;
-    delete plain.nationality;
-    delete plain.birthDate;
-
-    // Remove PI from CandidateProfile
-    if (plain.candidateProfile) {
-        delete plain.candidateProfile.phone;
-        delete plain.candidateProfile.address;
-        delete plain.candidateProfile.city;
-        delete plain.candidateProfile.country;
-    }
-
-    return plain;
-};
+// (Helper moved to server/utils/anonymize.js)
+const anonymize = anonymizeCandidate;
 
 // ── Browse candidates ──────────────────────────────────────────────────
 router.get('/candidates', async (req, res) => {
@@ -64,7 +41,7 @@ router.get('/candidates', async (req, res) => {
         }
 
         if (req.user.role === 'employer') {
-            result = result.map(anonymize);
+            result = result.map(c => anonymize(c, req.user.role));
         }
 
         res.json({ candidates: result });
@@ -97,8 +74,8 @@ router.get('/candidates/:id', async (req, res) => {
         }
 
         const result = req.user.role === 'employer'
-            ? anonymize(candidate)
-            : candidate.toJSON();
+            ? anonymize(candidate, req.user.role)
+            : anonymize(candidate, req.user.role); // Anonymize helper handles Staff full name too now
 
         res.json({ candidate: result, documents: docs });
     } catch (err) {
@@ -152,7 +129,7 @@ router.get('/my-quotes', authorize('employer'), async (req, res) => {
 
         const enriched = requests.map(r => {
             const plain = r.toJSON();
-            plain.candidate = anonymize(plain.candidate);
+            plain.candidate = anonymize(plain.candidate, req.user.role);
             return plain;
         });
 
@@ -173,7 +150,7 @@ router.get('/quotes/:id', authorize('employer'), async (req, res) => {
         if (!request) return res.status(404).json({ error: 'Quote request not found' });
 
         const plain = request.toJSON();
-        plain.candidate = anonymize(plain.candidate);
+        plain.candidate = anonymize(plain.candidate, req.user.role);
         res.json({ request: plain });
     } catch (err) {
         console.error('Get quote error:', err);
@@ -256,9 +233,9 @@ router.get('/my-relations', authorize('employer'), async (req, res) => {
         });
 
         const enriched = relations.map(r => {
-            const plain = r.toJSON();
-            plain.candidate = anonymize(plain.candidate);
-            return plain;
+            const rel = r.toJSON();
+            rel.candidate = anonymizeCandidate(rel.candidate, req.user.role);
+            return rel;
         });
 
         res.json({ relations: enriched });
