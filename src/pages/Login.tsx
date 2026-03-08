@@ -30,7 +30,6 @@ const Login = () => {
       navigate(path, { state: { user: loginResult.user } });
     }
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -134,7 +133,6 @@ const Login = () => {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Role selector */}
             <div>
               <label className="block text-sm font-medium text-cream/80 mb-2">
                 Sign in as
