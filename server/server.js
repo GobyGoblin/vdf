@@ -149,9 +149,7 @@ const startServer = async () => {
       console.log('Continuing with existing database structure...');
     }
 
-    // Create default admin user if not exists
-    const { User } = await import('./models/index.js');
-    const bcrypt = (await import('bcryptjs')).default;
+    // Use existing imports for default admin user setup
 
     let adminExists = await User.findOne({ where: { email: 'admin@example.com' } });
     if (!adminExists) {
