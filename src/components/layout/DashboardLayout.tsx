@@ -130,6 +130,27 @@ const navigationByRole: Record<UserRole, NavigationGroup[]> = {
         { name: 'Data Retention', href: '/admin/retention', icon: FolderOpen },
       ]
     },
+    {
+      category: 'Verifications',
+      items: [
+        { name: 'Review Queue', href: '/admin/review-queue', icon: Clock },
+      ]
+    },
+    {
+      category: 'Recruitment Management',
+      items: [
+        { name: 'Global Pipeline', href: '/admin/pipeline', icon: Users },
+        { name: 'Quote Requests', href: '/admin/quotes', icon: Calculator },
+        { name: 'Hiring Processes', href: '/admin/hiring', icon: CheckCircle2 },
+        { name: 'Talent Demands', href: '/admin/talent-demands', icon: Target },
+      ]
+    },
+    {
+      category: 'Infrastructure',
+      items: [
+        { name: 'Domains', href: '/admin/domains', icon: Globe },
+      ]
+    },
   ],
 };
 
