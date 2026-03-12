@@ -217,7 +217,7 @@ const StaffHiringProcesses = () => {
                                         {/* Action Section */}
                                         <div className="md:w-[200px] shrink-0 mt-4 md:mt-0 flex justify-end">
                                             <Link
-                                                to={`\${window.location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/hiring/${process.id}`}
+                                                to={`${window.location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/hiring/${process.id}`}
                                                 className="btn-gold w-full md:w-auto shadow-lg shadow-gold/20 flex items-center justify-center gap-2 py-3 px-6 text-sm font-bold"
                                             >
                                                 Manage Process <ChevronRight className="w-4 h-4" />

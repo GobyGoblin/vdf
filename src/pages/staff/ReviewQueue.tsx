@@ -206,7 +206,7 @@ const StaffReviewQueue = () => {
                           {new Date(candidate.oldestUpload).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <Link to={`\${window.location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/reviews/${candidate.userId}`} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gold text-navy font-semibold hover:bg-gold-light transition-colors text-sm">Review <ArrowRight className="w-4 h-4" /></Link>
+                          <Link to={`${window.location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/reviews/${candidate.userId}`} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gold text-navy font-semibold hover:bg-gold-light transition-colors text-sm">Review <ArrowRight className="w-4 h-4" /></Link>
                         </td>
                       </motion.tr>
                     ))}
@@ -260,7 +260,7 @@ const StaffReviewQueue = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <Link
-                            to={`\${window.location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/companies/${company.id}`}
+                            to={`${window.location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/companies/${company.id}`}
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gold text-navy font-semibold hover:bg-gold-light transition-colors text-sm"
                           >
                             Review <ArrowRight className="w-4 h-4" />
