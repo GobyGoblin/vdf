@@ -131,7 +131,7 @@ const StaffDashboard = () => {
                 <ArrowRight className="w-5 h-5 text-muted-foreground" />
               </Link>
               <Link
-                to="/staff/users"
+                to={window.location.pathname.startsWith('/admin') ? '/admin/staff-users' : '/staff/users'}
                 className="flex items-center justify-between p-4 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
               >
                 <div className="flex items-center gap-3">

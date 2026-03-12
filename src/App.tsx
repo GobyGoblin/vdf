@@ -146,8 +146,9 @@ const App = () => (
           <Route path="/admin/companies/:companyId" element={<ProtectedRoute allowedRoles={['admin']}><StaffCompanyReviewDetail /></ProtectedRoute>} />
           <Route path="/admin/talent-demands" element={<ProtectedRoute allowedRoles={['admin']}><StaffTalentDemands /></ProtectedRoute>} />
           <Route path="/admin/talent-demands/:id" element={<ProtectedRoute allowedRoles={['admin']}><StaffTalentDemandFulfillment /></ProtectedRoute>} />
-          <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><StaffUsers /></ProtectedRoute>} />
+          <Route path="/admin/staff-users" element={<ProtectedRoute allowedRoles={['admin']}><StaffUsers /></ProtectedRoute>} />
           <Route path="/admin/users/:userId" element={<ProtectedRoute allowedRoles={['admin']}><StaffUserDetail /></ProtectedRoute>} />
+          <Route path="/admin/staff-users/:userId" element={<ProtectedRoute allowedRoles={['admin']}><StaffUserDetail /></ProtectedRoute>} />
           <Route path="/admin/domains" element={<ProtectedRoute allowedRoles={['admin']}><StaffDomainsManagement /></ProtectedRoute>} />
           <Route path="/admin/quotes" element={<ProtectedRoute allowedRoles={['admin']}><StaffQuoteRequests /></ProtectedRoute>} />
           <Route path="/admin/pipeline" element={<ProtectedRoute allowedRoles={['admin']}><StaffCandidatePipeline /></ProtectedRoute>} />

@@ -236,7 +236,7 @@ const StaffUsers = () => {
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: i * 0.03 }}
-                                            onClick={() => navigate(`/staff/users/${user.id}`)}
+                                            onClick={() => navigate(window.location.pathname.startsWith('/admin') ? `/admin/staff-users/${user.id}` : `/staff/users/${user.id}`)}
                                             className="hover:bg-secondary/20 transition-colors group cursor-pointer"
                                         >
                                             <td className="px-6 py-4">
@@ -425,7 +425,7 @@ const StaffUsers = () => {
                                     {/* Footer */}
                                     <div className="p-6 border-t border-border bg-background flex gap-3">
                                         <button
-                                            onClick={() => navigate(`/staff/users/${quickLookData.user.id}`)}
+                                            onClick={() => navigate(window.location.pathname.startsWith('/admin') ? `/admin/staff-users/${quickLookData.user.id}` : `/staff/users/${quickLookData.user.id}`)}
                                             className="flex-1 py-3 rounded-xl bg-gold text-navy font-bold hover:shadow-lg hover:shadow-gold/20 transition-all flex items-center justify-center gap-2"
                                         >
                                             View Full Management Profile

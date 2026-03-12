@@ -151,7 +151,7 @@ const StaffUserDetail = () => {
             <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
                 <div className="text-center py-12">
                     <h2 className="text-xl font-bold mb-4">User not found</h2>
-                    <button onClick={() => navigate('/staff/users')} className="text-gold hover:underline">
+                    <button onClick={() => navigate(window.location.pathname.startsWith('/admin') ? '/admin/staff-users' : '/staff/users')} className="text-gold hover:underline">
                         Back to User Directory
                     </button>
                 </div>
@@ -167,7 +167,7 @@ const StaffUserDetail = () => {
         <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
             <div className="max-w-5xl mx-auto space-y-6">
                 <button
-                    onClick={() => navigate('/staff/users')}
+                    onClick={() => navigate(window.location.pathname.startsWith('/admin') ? '/admin/staff-users' : '/staff/users')}
                     className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
                 >
                     <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />

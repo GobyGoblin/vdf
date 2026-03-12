@@ -81,7 +81,7 @@ const AdminDashboard = () => {
   const staffActions = [
     { label: 'Review Queue', desc: `${staffStats.pendingReviews} items awaiting verification`, href: '/admin/review-queue', icon: Clock, color: 'text-warning', bg: 'bg-warning/10' },
     { label: 'Global Pipeline', desc: 'Monitor all placement activities', href: '/admin/pipeline', icon: Target, color: 'text-gold', bg: 'bg-gold/10' },
-    { label: 'Staff User Directory', desc: 'Manage and provision users', href: '/admin/users', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Staff User Directory', desc: 'Manage and provision users', href: '/admin/staff-users', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { label: 'Talent Demands', desc: 'Fulfill custom profile requests', href: '/admin/talent-demands', icon: Target, color: 'text-gold', bg: 'bg-gold/10' },
     { label: 'Homepage Sectors', desc: 'Modify domains of work categories', href: '/admin/domains', icon: Globe, color: 'text-purple-500', bg: 'bg-purple-500/10' },
     { label: 'Hiring Processes', desc: 'Manage post-purchase relocation steps', href: '/admin/hiring', icon: CheckCircle2, color: 'text-success', bg: 'bg-success/10' },
