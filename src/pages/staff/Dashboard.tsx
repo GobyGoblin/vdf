@@ -57,7 +57,7 @@ const StaffDashboard = () => {
   ];
 
   return (
-    <DashboardLayout role="staff">
+    <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
       <div className="space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">

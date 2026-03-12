@@ -152,7 +152,7 @@ const StaffReviewDetail = () => {
 
   if (loading) {
     return (
-      <DashboardLayout role="staff">
+      <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
         <div className="flex items-center justify-center h-64">
           <div className="text-muted-foreground">Loading candidate details...</div>
         </div>
@@ -162,10 +162,10 @@ const StaffReviewDetail = () => {
 
   if (!candidate) {
     return (
-      <DashboardLayout role="staff">
+      <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
         <div className="text-center py-12">
           <h2 className="text-xl font-semibold text-foreground mb-2">Candidate not found</h2>
-          <Link to="/staff/review-queue" className="text-gold hover:underline">
+          <Link to={window.location.pathname.startsWith('/admin') ? '/admin/review-queue' : '/staff/review-queue'} className="text-gold hover:underline">
             Back to Review Queue
           </Link>
         </div>
@@ -180,7 +180,7 @@ const StaffReviewDetail = () => {
   const canVerify = pendingCount === 0 && !hasRejectedDocs;
 
   return (
-    <DashboardLayout role="staff">
+    <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
       <div className="space-y-6">
         {/* Back Button */}
         <button

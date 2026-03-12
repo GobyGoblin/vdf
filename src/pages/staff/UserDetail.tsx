@@ -134,7 +134,7 @@ const StaffUserDetail = () => {
 
     if (loading) {
         return (
-            <DashboardLayout role="staff">
+            <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
                 <div className="flex items-center justify-center h-64">
                     <motion.div
                         animate={{ rotate: 360 }}
@@ -148,7 +148,7 @@ const StaffUserDetail = () => {
 
     if (!data?.user) {
         return (
-            <DashboardLayout role="staff">
+            <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
                 <div className="text-center py-12">
                     <h2 className="text-xl font-bold mb-4">User not found</h2>
                     <button onClick={() => navigate('/staff/users')} className="text-gold hover:underline">
@@ -164,7 +164,7 @@ const StaffUserDetail = () => {
     const isEmployer = user.role === 'employer';
 
     return (
-        <DashboardLayout role="staff">
+        <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
             <div className="max-w-5xl mx-auto space-y-6">
                 <button
                     onClick={() => navigate('/staff/users')}

@@ -112,7 +112,7 @@ const StaffHiringProcesses = () => {
     );
 
     return (
-        <DashboardLayout role="staff">
+        <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
             <div className="space-y-8 pb-12">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
                     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
@@ -217,7 +217,7 @@ const StaffHiringProcesses = () => {
                                         {/* Action Section */}
                                         <div className="md:w-[200px] shrink-0 mt-4 md:mt-0 flex justify-end">
                                             <Link
-                                                to={`/staff/hiring/${process.id}`}
+                                                to={`\${window.location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/hiring/${process.id}`}
                                                 className="btn-gold w-full md:w-auto shadow-lg shadow-gold/20 flex items-center justify-center gap-2 py-3 px-6 text-sm font-bold"
                                             >
                                                 Manage Process <ChevronRight className="w-4 h-4" />

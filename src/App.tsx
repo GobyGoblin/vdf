@@ -139,8 +139,22 @@ const App = () => (
           <Route path="/staff/hiring" element={<ProtectedRoute allowedRoles={['staff']}><StaffHiringProcesses /></ProtectedRoute>} />
           <Route path="/staff/hiring/:id" element={<ProtectedRoute allowedRoles={['staff']}><StaffHiringTracker /></ProtectedRoute>} />
 
-          {/* Admin */}
+          {/* Admin Versions of Staff Routes */}
           <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/review-queue" element={<ProtectedRoute allowedRoles={['admin']}><StaffReviewQueue /></ProtectedRoute>} />
+          <Route path="/admin/reviews/:candidateId" element={<ProtectedRoute allowedRoles={['admin']}><StaffReviewDetail /></ProtectedRoute>} />
+          <Route path="/admin/companies/:companyId" element={<ProtectedRoute allowedRoles={['admin']}><StaffCompanyReviewDetail /></ProtectedRoute>} />
+          <Route path="/admin/talent-demands" element={<ProtectedRoute allowedRoles={['admin']}><StaffTalentDemands /></ProtectedRoute>} />
+          <Route path="/admin/talent-demands/:id" element={<ProtectedRoute allowedRoles={['admin']}><StaffTalentDemandFulfillment /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><StaffUsers /></ProtectedRoute>} />
+          <Route path="/admin/users/:userId" element={<ProtectedRoute allowedRoles={['admin']}><StaffUserDetail /></ProtectedRoute>} />
+          <Route path="/admin/domains" element={<ProtectedRoute allowedRoles={['admin']}><StaffDomainsManagement /></ProtectedRoute>} />
+          <Route path="/admin/quotes" element={<ProtectedRoute allowedRoles={['admin']}><StaffQuoteRequests /></ProtectedRoute>} />
+          <Route path="/admin/pipeline" element={<ProtectedRoute allowedRoles={['admin']}><StaffCandidatePipeline /></ProtectedRoute>} />
+          <Route path="/admin/hiring" element={<ProtectedRoute allowedRoles={['admin']}><StaffHiringProcesses /></ProtectedRoute>} />
+          <Route path="/admin/hiring/:id" element={<ProtectedRoute allowedRoles={['admin']}><StaffHiringTracker /></ProtectedRoute>} />
+
+          {/* Core Admin */}
           <Route path="/admin/insights" element={<ProtectedRoute allowedRoles={['admin']}><AdminInsights /></ProtectedRoute>} />
           <Route path="/admin/insights/new" element={<ProtectedRoute allowedRoles={['admin']}><AdminInsightEdit /></ProtectedRoute>} />
           <Route path="/admin/insights/:id/edit" element={<ProtectedRoute allowedRoles={['admin']}><AdminInsightEdit /></ProtectedRoute>} />

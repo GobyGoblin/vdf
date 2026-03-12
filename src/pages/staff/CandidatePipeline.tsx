@@ -117,7 +117,7 @@ const StaffCandidatePipeline = () => {
         });
 
     return (
-        <DashboardLayout role="staff">
+        <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
             <div className="space-y-8 pb-12">
                 {/* Header Section */}
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 px-2">
@@ -245,7 +245,7 @@ const StaffCandidatePipeline = () => {
                                                         <div>
                                                             <div className="flex items-center gap-2">
                                                                 <span className="font-bold text-foreground text-sm group-hover:text-gold transition-colors">{rel.candidate?.fullName}</span>
-                                                                <Link to={`/staff/users/${rel.candidateId}`} className="p-1 rounded hover:bg-white text-muted-foreground/40 hover:text-gold transition-all">
+                                                                <Link to={`\${window.location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/users/${rel.candidateId}`} className="p-1 rounded hover:bg-white text-muted-foreground/40 hover:text-gold transition-all">
                                                                     <ExternalLink className="w-3 h-3" />
                                                                 </Link>
                                                             </div>
@@ -286,7 +286,7 @@ const StaffCandidatePipeline = () => {
                                                 <td className="px-6 py-5 text-right">
                                                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <Link
-                                                            to={`/staff/users/${rel.candidateId}`}
+                                                            to={`\${window.location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/users/${rel.candidateId}`}
                                                             className="p-2 rounded-lg bg-white border border-border/50 text-muted-foreground hover:text-gold hover:border-gold/30 hover:shadow-sm transition-all shadow-inner"
                                                             title="View Details"
                                                         >

@@ -46,7 +46,7 @@ const StaffTalentDemands = () => {
     };
 
     return (
-        <DashboardLayout role="staff">
+        <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
             <div className="max-w-7xl mx-auto space-y-8 pb-20">
                 <div>
                     <h1 className="text-3xl font-display font-bold text-foreground">Global Talent Demands</h1>

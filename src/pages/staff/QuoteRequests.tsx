@@ -83,7 +83,7 @@ const QuoteRequests = () => {
     });
 
     return (
-        <DashboardLayout role="staff">
+        <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
             <div className="space-y-8">
                 <div>
                     <h1 className="text-2xl font-display font-bold text-foreground">Quote Requests</h1>

@@ -184,7 +184,7 @@ const TalentDemandFulfillment = () => {
 
     if (loading) {
         return (
-            <DashboardLayout role="staff">
+            <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
                 <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
                     <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-12 h-12 border-4 border-gold border-t-transparent rounded-full" />
                     <p className="text-muted-foreground font-display animate-pulse">Initializing Fulfillment Command Center...</p>
@@ -198,12 +198,12 @@ const TalentDemandFulfillment = () => {
     const linkedCount = demand.suggestedCandidateIds.length + (demand.manualProfiles?.length || 0);
 
     return (
-        <DashboardLayout role="staff">
+        <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
             <div className="max-w-[1400px] mx-auto space-y-8 pb-20">
                 {/* Unified Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div className="space-y-4">
-                        <Link to="/staff/talent-demands" className="inline-flex items-center gap-2 text-gold hover:text-gold/80 font-black uppercase tracking-[0.2em] text-[10px] transition-all">
+                        <Link to={window.location.pathname.startsWith('/admin') ? '/admin/talent-demands' : '/staff/talent-demands'} className="inline-flex items-center gap-2 text-gold hover:text-gold/80 font-black uppercase tracking-[0.2em] text-[10px] transition-all">
                             <ArrowLeft className="w-3 h-3" /> Back to Quotas
                         </Link>
                         <div>

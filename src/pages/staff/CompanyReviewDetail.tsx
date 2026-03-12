@@ -105,7 +105,7 @@ const CompanyReviewDetail = () => {
 
     if (loading) {
         return (
-            <DashboardLayout role="staff">
+            <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
                 <div className="flex items-center justify-center h-64">
                     <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full" />
                 </div>
@@ -115,10 +115,10 @@ const CompanyReviewDetail = () => {
 
     if (!company) {
         return (
-            <DashboardLayout role="staff">
+            <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
                 <div className="text-center py-12">
                     <h2 className="text-xl font-semibold text-foreground mb-2">Company not found</h2>
-                    <Link to="/staff/review-queue" className="text-gold hover:underline">
+                    <Link to={window.location.pathname.startsWith('/admin') ? '/admin/review-queue' : '/staff/review-queue'} className="text-gold hover:underline">
                         Back to Review Queue
                     </Link>
                 </div>
@@ -127,7 +127,7 @@ const CompanyReviewDetail = () => {
     }
 
     return (
-        <DashboardLayout role="staff">
+        <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
             <div className="space-y-6">
                 <button
                     onClick={() => navigate('/staff/review-queue')}

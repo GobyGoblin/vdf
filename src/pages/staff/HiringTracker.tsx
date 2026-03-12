@@ -104,7 +104,7 @@ const StaffHiringTracker = () => {
 
     if (loading) {
         return (
-            <DashboardLayout role="staff">
+            <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
                 <div className="flex items-center justify-center min-h-[60vh]">
                     <div className="w-12 h-12 border-4 border-gold border-t-transparent rounded-full animate-spin" />
                 </div>
@@ -114,13 +114,13 @@ const StaffHiringTracker = () => {
 
     if (!request) {
         return (
-            <DashboardLayout role="staff">
+            <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
                 <div className="text-center py-20">
                     <h2 className="text-2xl font-bold mb-4">Tracking Not Available</h2>
                     <p className="text-muted-foreground mb-8">
                         The hiring tracking for this candidate has not started yet or the request is invalid.
                     </p>
-                    <Link to="/staff/hiring" className="text-gold font-bold hover:underline">
+                    <Link to={window.location.pathname.startsWith('/admin') ? '/admin/hiring' : '/staff/hiring'} className="text-gold font-bold hover:underline">
                         Return to Hiring Processes
                     </Link>
                 </div>
@@ -131,9 +131,9 @@ const StaffHiringTracker = () => {
     const { steps: processSteps, candidate, employer, currentStep } = request;
 
     return (
-        <DashboardLayout role="staff">
+        <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
             <div className="max-w-4xl mx-auto space-y-8 pb-12">
-                <Link to="/staff/hiring" className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-gold transition-colors">
+                <Link to={window.location.pathname.startsWith('/admin') ? '/admin/hiring' : '/staff/hiring'} className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-gold transition-colors">
                     <ArrowLeft className="w-4 h-4" /> Back to Hiring Processes
                 </Link>
 
