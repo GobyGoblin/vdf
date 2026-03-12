@@ -19,6 +19,18 @@ import { staffAPI } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
+// Helper: Filter out non-component exports from lucide-react
+const ALL_LUCIDE_ICONS = Object.keys(LucideIcons).filter((key) => {
+    const val = (LucideIcons as any)[key];
+    return (
+        val &&
+        (typeof val === 'function' || typeof val === 'object') &&
+        key.length > 2 &&
+        key !== 'createLucideIcon' &&
+        key[0] === key[0].toUpperCase() // Icons are PascalCase
+    );
+});
+
 interface Domain {
     id: string;
     icon: string;
@@ -31,6 +43,7 @@ const StaffDomainsManagement = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
+    const [showIconDropdown, setShowIconDropdown] = useState(false);
     const [formData, setFormData] = useState({
         icon: 'Globe',
         title: '',
@@ -93,7 +106,9 @@ const StaffDomainsManagement = () => {
         }
     };
 
-    const lucideIcons = Object.keys(LucideIcons).filter(key => typeof (LucideIcons as any)[key] === 'function' && key.length > 2);
+    const filteredIcons = ALL_LUCIDE_ICONS
+        .filter(icon => icon.toLowerCase().includes(formData.icon.toLowerCase()))
+        .slice(0, 50); // Limit to 50 for performance
 
     return (
         <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
@@ -243,15 +258,51 @@ const StaffDomainsManagement = () => {
                                         <input
                                             required
                                             type="text"
-                                            list="lucide-icons"
                                             value={formData.icon}
-                                            onChange={e => setFormData({ ...formData, icon: e.target.value })}
+                                            onChange={e => {
+                                                setFormData({ ...formData, icon: e.target.value });
+                                                setShowIconDropdown(true);
+                                            }}
+                                            onFocus={() => setShowIconDropdown(true)}
+                                            onBlur={() => setTimeout(() => setShowIconDropdown(false), 200)}
                                             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-secondary/50 border border-border focus:ring-2 focus:ring-gold/30 outline-none font-mono text-sm"
                                             placeholder="Search icons (e.g. Monitor)"
                                         />
-                                        <datalist id="lucide-icons">
-                                            {lucideIcons.map(icon => <option key={icon} value={icon} />)}
-                                        </datalist>
+                                        
+                                        <AnimatePresence>
+                                            {showIconDropdown && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -5 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -5 }}
+                                                    className="absolute z-50 w-full mt-2 bg-background border border-border rounded-xl shadow-2xl max-h-60 overflow-y-auto"
+                                                >
+                                                    {filteredIcons.length === 0 ? (
+                                                        <div className="p-4 text-center text-sm text-muted-foreground">No icons found.</div>
+                                                    ) : (
+                                                        filteredIcons.map(iconName => {
+                                                            const IconOpt = (LucideIcons as any)[iconName];
+                                                            return (
+                                                                <button
+                                                                    key={iconName}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setFormData({ ...formData, icon: iconName });
+                                                                        setShowIconDropdown(false);
+                                                                    }}
+                                                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary text-left transition-colors"
+                                                                >
+                                                                    <div className="w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center border border-border">
+                                                                        <IconOpt className="w-4 h-4 text-gold" />
+                                                                    </div>
+                                                                    <span className="font-mono text-sm text-foreground">{iconName}</span>
+                                                                </button>
+                                                            );
+                                                        })
+                                                    )}
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
                                     <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-secondary/30 border border-border border-dashed">
                                         <span className="text-[10px] text-muted-foreground font-bold tracking-widest uppercase">Preview:</span>
