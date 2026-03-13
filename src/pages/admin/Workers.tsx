@@ -217,7 +217,7 @@ const AdminWorkers = () => {
                       </td>
                       <td className="p-4">
                         <Link
-                          to={`/admin/workers/${worker.id}`}
+                          to={`/admin/staff-users/${worker.id}`}
                           className="p-2 rounded-lg hover:bg-secondary transition-colors"
                           title="View Details"
                         >
