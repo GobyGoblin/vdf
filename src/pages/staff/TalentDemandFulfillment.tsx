@@ -19,13 +19,16 @@ import {
     BadgeEuro,
     ChevronRight,
     SearchCode,
-    Sparkles
+    Sparkles,
+    Pencil,
+    Check
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout';
 import { talentDemandsAPI, talentPoolAPI } from '@/lib/api';
 import { TalentDemand, ManualProfile } from '@/lib/mockData';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { formatYears, formatCurrency, parseYears, parseCurrency } from '@/lib/formatters';
 import { formatDistanceToNow } from 'date-fns';
 
 const TalentDemandFulfillment = () => {
@@ -38,7 +41,11 @@ const TalentDemandFulfillment = () => {
     const [linking, setLinking] = useState(false);
     const [fulfillmentMode, setFulfillmentMode] = useState<'pool' | 'manual'>('pool');
     const [manualForm, setManualForm] = useState({
-        fullName: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        linkedIn: '',
         sector: '',
         skills: '',
         experience: '',
@@ -47,7 +54,10 @@ const TalentDemandFulfillment = () => {
         nationality: '',
         badgeType: 'none' as 'gold' | 'blue' | 'none'
     });
-    const [quotedCandidateIds, setQuotedCandidateIds] = useState<string[]>([]);
+    const [candidateQuotes, setCandidateQuotes] = useState<Record<string, string>>({});
+    const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+    const [finalizing, setFinalizing] = useState(false);
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (id) {
@@ -73,9 +83,17 @@ const TalentDemandFulfillment = () => {
             setDemand(found);
             setCandidates(poolData);
 
-            // Extract IDs of candidates who already have active/approved quotes
-            const quotedIds = requests.map((r: any) => r.candidateId);
-            setQuotedCandidateIds(quotedIds);
+            // Extract IDs and quote values of candidates who already have active/approved quotes for this demand
+            const demandQuotes = requests.filter((r: any) => r.employerId === found.employerId && r.status === 'approved');
+            const quotedIds = demandQuotes.map((r: any) => r.candidateId);
+            const quotesMap: Record<string, string> = {};
+            demandQuotes.forEach((r: any) => {
+                quotesMap[r.candidateId] = Math.max(
+                    ...r.options.map((o: any) => parseCurrency(o.costEstimate) || 0)
+                ).toLocaleString('en-EU', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            });
+            
+            setCandidateQuotes(quotesMap);
         } catch (error) {
             console.error('Failed to load fulfillment center:', error);
             toast({ title: 'Error', description: 'Failed to load fulfillment data.', variant: 'destructive' });
@@ -113,7 +131,6 @@ const TalentDemandFulfillment = () => {
                 suggestedCandidateIds: [...demand.suggestedCandidateIds, candidateId],
                 status: newStatus
             });
-            setQuotedCandidateIds(prev => [...prev, candidateId]);
 
             toast({
                 title: 'Fulfillment Linked',
@@ -126,12 +143,50 @@ const TalentDemandFulfillment = () => {
         }
     };
 
+    const handleUpdateCandidateQuote = async (candidateId: string) => {
+        if (!demand) return;
+        try {
+            const rawValue = candidateQuotes[candidateId];
+            const parsedValue = parseCurrency(rawValue);
+            const formattedValue = parsedValue ? formatCurrency(rawValue) : rawValue;
+            
+            await talentDemandsAPI.updateCandidateQuote(demand.id, candidateId, formattedValue);
+            setCandidateQuotes(prev => ({ ...prev, [candidateId]: formattedValue }));
+            setEditingQuoteId(null);
+            toast({ title: 'Quote updated', description: 'The custom quote for this profile has been saved.' });
+        } catch (error) {
+            toast({ title: 'Error', description: 'Could not attach custom quote.', variant: 'destructive' });
+        }
+    };
+
     const handleManualSuggest = async () => {
-        if (!demand || !manualForm.fullName) return;
+        if (!demand) return;
+
+        // Validate — all fields required except LinkedIn
+        const errors: Record<string, string> = {};
+        if (!manualForm.firstName.trim()) errors.firstName = 'First Name is required.';
+        if (!manualForm.lastName.trim()) errors.lastName = 'Last Name is required.';
+        if (!manualForm.email.trim()) errors.email = 'Email is required.';
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(manualForm.email)) errors.email = 'Enter a valid email address.';
+        if (!manualForm.phone.trim()) errors.phone = 'Phone number is required.';
+        else if (!/^[+\d\s()\-]{6,20}$/.test(manualForm.phone)) errors.phone = 'Enter a valid phone number.';
+        if (!manualForm.sector.trim()) errors.sector = 'Professional Focus is required.';
+        if (!manualForm.location.trim()) errors.location = 'Location is required.';
+        if (!manualForm.yearsOfExperience.trim()) errors.yearsOfExperience = 'Experience Level is required.';
+        if (!manualForm.skills.trim()) errors.skills = 'Technical Stack is required.';
+        if (!manualForm.nationality.trim()) errors.nationality = 'Nationality is required.';
+        if (!manualForm.badgeType || manualForm.badgeType === 'none') errors.badgeType = 'Assignment Tier is required.';
+        if (!manualForm.experience.trim()) errors.experience = 'Vetting Synopsis is required.';
+        if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
+        setFormErrors({});
+
         setLinking(true);
         try {
             const profile = {
                 ...manualForm,
+                email: manualForm.email || undefined,
+                phone: manualForm.phone || undefined,
+                linkedIn: manualForm.linkedIn || undefined,
                 skills: manualForm.skills.split(',').map(s => s.trim()).filter(Boolean)
             };
             const response = await (talentDemandsAPI as any).addManualProfile(demand.id, profile);
@@ -153,14 +208,13 @@ const TalentDemandFulfillment = () => {
                 setCandidates(prev => [...prev, response.profile]);
                 setFulfillmentMode('pool');
 
-                toast({
-                    title: 'Strategic Injection Successful',
-                    description: 'Candidate added to global pool and linked to this demand manifest.',
-                });
-
                 // Reset form with all properties to satisfy TypeScript
                 setManualForm({
-                    fullName: '',
+                    firstName: '',
+                    lastName: '',
+                    email: '',
+                    phone: '',
+                    linkedIn: '',
                     sector: '',
                     skills: '',
                     experience: '',
@@ -170,11 +224,58 @@ const TalentDemandFulfillment = () => {
                     badgeType: 'none'
                 });
             }
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to add manual profile.', variant: 'destructive' });
+        } catch (error: any) {
+            const msg = error?.response?.data?.error || 'Failed to add manual profile.';
+            // Try to surface field-level errors if backend hints at them
+            if (msg.toLowerCase().includes('email')) setFormErrors(e => ({ ...e, email: msg }));
+            else toast({ title: 'Error', description: msg, variant: 'destructive' });
         } finally {
             setLinking(false);
         }
+    };
+
+    const handleFinalize = async () => {
+        if (!demand) return;
+        if (demand.suggestedCandidateIds.length === 0) {
+            toast({ title: 'Empty Manifest', description: 'Add at least one candidate before finalizing.', variant: 'destructive' });
+            return;
+        }
+        if (!confirm('Finalize this talent bundle? The demand will be marked as Treated and sent to the employer.')) return;
+        setFinalizing(true);
+        try {
+            await talentDemandsAPI.finalize(demand.id);
+            setDemand({ ...demand, status: 'treated' });
+            toast({ title: 'Bundle Finalized!', description: 'Demand marked as Treated. Employer can now view matched candidates.' });
+        } catch (err: any) {
+            toast({ title: 'Error', description: err.response?.data?.error || 'Failed to finalize.', variant: 'destructive' });
+        } finally {
+            setFinalizing(false);
+        }
+    };
+
+    const handleRemoveCandidate = async (candidateId: string) => {
+        if (!demand) return;
+        try {
+            await talentDemandsAPI.removeCandidate(demand.id, candidateId);
+            setDemand({ ...demand, suggestedCandidateIds: demand.suggestedCandidateIds.filter(id => id !== candidateId) });
+            toast({ title: 'Removed', description: 'Candidate removed from this manifest.' });
+        } catch (err: any) {
+            toast({ title: 'Error', description: err.response?.data?.error || 'Could not remove candidate.', variant: 'destructive' });
+        }
+    };
+
+    const calculateTotalYield = () => {
+        let total = 0;
+        const linkedIds = demand?.suggestedCandidateIds || [];
+        linkedIds.forEach(id => {
+            const quoteVal = candidateQuotes[id];
+            if (quoteVal) {
+                total += Number(parseCurrency(quoteVal) || 0);
+            } else {
+                total += 12500; // default average
+            }
+        });
+        return total;
     };
 
     const filteredCandidates = candidates.filter(c => {
@@ -227,12 +328,30 @@ const TalentDemandFulfillment = () => {
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="text-right hidden md:block">
-                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">Estimated Manifest Value</p>
-                            <p className="text-2xl font-display font-bold text-success">€{(linkedCount * 12500).toLocaleString()}<span className="text-sm font-normal opacity-60 ml-1">avg.</span></p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">Total Manifest Yield</p>
+                            <p className="text-2xl font-display font-bold text-success">
+                                {formatCurrency(calculateTotalYield().toString())}
+                            </p>
                         </div>
                         <div className="h-12 w-px bg-border/50 mx-2 hidden md:block" />
-                        <button className="px-6 py-3 rounded-2xl bg-gold text-navy font-black uppercase tracking-widest text-xs shadow-xl shadow-gold/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
-                            Finalize Bundle <Zap className="w-4 h-4 fill-current" />
+                        <button
+                            onClick={handleFinalize}
+                            disabled={finalizing || demand.status === 'treated'}
+                            className={cn(
+                                "px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl transition-all flex items-center gap-2",
+                                demand.status === 'treated'
+                                    ? "bg-success/10 text-success border border-success/20 cursor-default"
+                                    : "bg-gold text-navy hover:scale-[1.02] active:scale-[0.98] shadow-gold/20"
+                            )}
+                        >
+                            {finalizing ? (
+                                <span className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+                            ) : demand.status === 'treated' ? (
+                                <CheckCircle2 className="w-4 h-4" />
+                            ) : (
+                                <Zap className="w-4 h-4 fill-current" />
+                            )}
+                            {demand.status === 'treated' ? 'Finalized' : finalizing ? 'Finalizing...' : 'Finalize Bundle'}
                         </button>
                     </div>
                 </div>
@@ -351,7 +470,6 @@ const TalentDemandFulfillment = () => {
                                     <div className="grid sm:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                                         {filteredCandidates.map(candidate => {
                                             const isLinked = demand.suggestedCandidateIds.includes(candidate.id);
-                                            const isAlreadyQuoted = quotedCandidateIds.includes(candidate.id) && !isLinked;
 
                                             return (
                                                 <motion.div
@@ -360,8 +478,7 @@ const TalentDemandFulfillment = () => {
                                                     className={cn(
                                                         "p-4 rounded-2xl border transition-all group",
                                                         isLinked ? "bg-success/5 border-success/20 opacity-70" :
-                                                            isAlreadyQuoted ? "bg-secondary/20 border-border opacity-60" :
-                                                                "bg-background border-border hover:border-gold/30 hover:shadow-lg"
+                                                            "bg-background border-border hover:border-gold/30 hover:shadow-lg"
                                                     )}
                                                 >
                                                     <div className="flex items-start justify-between">
@@ -374,22 +491,16 @@ const TalentDemandFulfillment = () => {
                                                                 <p className="text-[10px] text-muted-foreground font-black uppercase tracking-tighter">{candidate.sector}</p>
                                                             </div>
                                                         </div>
-                                                        {isAlreadyQuoted ? (
-                                                            <div className="px-2 py-1 rounded bg-secondary text-muted-foreground text-[8px] font-black uppercase tracking-widest border border-border">
-                                                                Quoted
-                                                            </div>
-                                                        ) : (
-                                                            <button
-                                                                disabled={isLinked || linking}
-                                                                onClick={() => handleSuggestCandidate(candidate.id)}
-                                                                className={cn(
-                                                                    "p-2 rounded-xl transition-all",
-                                                                    isLinked ? "text-success bg-success/10" : "text-gold bg-gold/10 hover:bg-gold hover:text-navy"
-                                                                )}
-                                                            >
-                                                                {isLinked ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                                                            </button>
-                                                        )}
+                                                        <button
+                                                            disabled={isLinked || linking}
+                                                            onClick={() => handleSuggestCandidate(candidate.id)}
+                                                            className={cn(
+                                                                "p-2 rounded-xl transition-all",
+                                                                isLinked ? "text-success bg-success/10" : "text-gold bg-gold/10 hover:bg-gold hover:text-navy"
+                                                            )}
+                                                        >
+                                                            {isLinked ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                                        </button>
                                                     </div>
                                                     <div className="mt-4 flex flex-wrap gap-1">
                                                         {candidate.skills?.slice(0, 3).map((s: string) => (
@@ -416,86 +527,171 @@ const TalentDemandFulfillment = () => {
                                     </div>
 
                                     <div className="grid md:grid-cols-2 gap-4">
+                                        {/* Row 1: Name */}
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Candidate Full Name</label>
+                                            <label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", formErrors.firstName ? 'text-destructive' : 'text-muted-foreground')}>
+                                                First Name <span className="text-destructive">*</span>
+                                            </label>
                                             <input
-                                                value={manualForm.fullName}
-                                                onChange={e => setManualForm({ ...manualForm, fullName: e.target.value })}
-                                                placeholder="e.g. Thomas Müller"
+                                                value={manualForm.firstName}
+                                                onChange={e => { setManualForm({ ...manualForm, firstName: e.target.value }); setFormErrors(fe => ({ ...fe, firstName: '' })); }}
+                                                placeholder="e.g. Thomas"
+                                                className={cn("w-full p-4 rounded-xl bg-secondary/30 border outline-none font-bold transition-colors", formErrors.firstName ? 'border-destructive focus:border-destructive' : 'border-border focus:border-gold/50')}
+                                            />
+                                            {formErrors.firstName && <p className="text-[10px] text-destructive font-bold ml-1">{formErrors.firstName}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", formErrors.lastName ? 'text-destructive' : 'text-muted-foreground')}>
+                                                Last Name <span className="text-destructive">*</span>
+                                            </label>
+                                            <input
+                                                value={manualForm.lastName}
+                                                onChange={e => { setManualForm({ ...manualForm, lastName: e.target.value }); setFormErrors(fe => ({ ...fe, lastName: '' })); }}
+                                                placeholder="e.g. Müller"
+                                                className={cn("w-full p-4 rounded-xl bg-secondary/30 border outline-none font-bold transition-colors", formErrors.lastName ? 'border-destructive focus:border-destructive' : 'border-border focus:border-gold/50')}
+                                            />
+                                            {formErrors.lastName && <p className="text-[10px] text-destructive font-bold ml-1">{formErrors.lastName}</p>}
+                                        </div>
+                                        {/* Row 2: Email + Phone */}
+                                        <div className="space-y-2">
+                                            <label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", formErrors.email ? 'text-destructive' : 'text-muted-foreground')}>
+                                                Email Address <span className="text-destructive">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={manualForm.email}
+                                                onChange={e => { setManualForm({ ...manualForm, email: e.target.value }); setFormErrors(fe => ({ ...fe, email: '' })); }}
+                                                placeholder="e.g. thomas.muller@email.com"
+                                                className={cn("w-full p-4 rounded-xl bg-secondary/30 border outline-none font-bold transition-colors", formErrors.email ? 'border-destructive focus:border-destructive' : 'border-border focus:border-gold/50')}
+                                            />
+                                            {formErrors.email && <p className="text-[10px] text-destructive font-bold ml-1">{formErrors.email}</p>}
+                                        </div>
+                                        {/* Row 2: Phone + LinkedIn */}
+                                        <div className="space-y-2">
+                                            <label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", formErrors.phone ? 'text-destructive' : 'text-muted-foreground')}>
+                                                Phone Number <span className="text-destructive">*</span>
+                                            </label>
+                                            <input
+                                                type="tel"
+                                                value={manualForm.phone}
+                                                onChange={e => { setManualForm({ ...manualForm, phone: e.target.value }); setFormErrors(fe => ({ ...fe, phone: '' })); }}
+                                                placeholder="e.g. +49 170 1234567"
+                                                className={cn("w-full p-4 rounded-xl bg-secondary/30 border outline-none font-bold transition-colors", formErrors.phone ? 'border-destructive focus:border-destructive' : 'border-border focus:border-gold/50')}
+                                            />
+                                            {formErrors.phone && <p className="text-[10px] text-destructive font-bold ml-1">{formErrors.phone}</p>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                                                LinkedIn Profile URL <span className="text-[9px] opacity-50">(optional)</span>
+                                            </label>
+                                            <input
+                                                type="url"
+                                                value={manualForm.linkedIn}
+                                                onChange={e => setManualForm({ ...manualForm, linkedIn: e.target.value })}
+                                                placeholder="e.g. linkedin.com/in/thomas-muller"
                                                 className="w-full p-4 rounded-xl bg-secondary/30 border border-border outline-none focus:border-gold/50 font-bold"
                                             />
                                         </div>
+                                        {/* Row 3: LinkedIn + Professional Focus */}
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Professional Focus</label>
+                                            <label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", formErrors.sector ? 'text-destructive' : 'text-muted-foreground')}>
+                                                Professional Focus <span className="text-destructive">*</span>
+                                            </label>
                                             <input
                                                 value={manualForm.sector}
-                                                onChange={e => setManualForm({ ...manualForm, sector: e.target.value })}
+                                                onChange={e => { setManualForm({ ...manualForm, sector: e.target.value }); setFormErrors(fe => ({ ...fe, sector: '' })); }}
                                                 placeholder="e.g. Cloud Security Architect"
-                                                className="w-full p-4 rounded-xl bg-secondary/30 border border-border outline-none focus:border-gold/50 font-bold"
+                                                className={cn("w-full p-4 rounded-xl bg-secondary/30 border outline-none font-bold transition-colors", formErrors.sector ? 'border-destructive focus:border-destructive' : 'border-border focus:border-gold/50')}
                                             />
+                                            {formErrors.sector && <p className="text-[10px] text-destructive font-bold ml-1">{formErrors.sector}</p>}
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Location / Availability</label>
+                                            <label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", formErrors.location ? 'text-destructive' : 'text-muted-foreground')}>
+                                                Location / Availability <span className="text-destructive">*</span>
+                                            </label>
                                             <input
                                                 value={manualForm.location}
-                                                onChange={e => setManualForm({ ...manualForm, location: e.target.value })}
+                                                onChange={e => { setManualForm({ ...manualForm, location: e.target.value }); setFormErrors(fe => ({ ...fe, location: '' })); }}
                                                 placeholder="e.g. Berlin (Hybrid)"
-                                                className="w-full p-4 rounded-xl bg-secondary/30 border border-border outline-none focus:border-gold/50 font-bold"
+                                                className={cn("w-full p-4 rounded-xl bg-secondary/30 border outline-none font-bold transition-colors", formErrors.location ? 'border-destructive focus:border-destructive' : 'border-border focus:border-gold/50')}
                                             />
+                                            {formErrors.location && <p className="text-[10px] text-destructive font-bold ml-1">{formErrors.location}</p>}
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Experience Level</label>
+                                            <label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", formErrors.yearsOfExperience ? 'text-destructive' : 'text-muted-foreground')}>
+                                                Experience Level <span className="text-destructive">*</span> <span className="text-[9px] opacity-60">(years)</span>
+                                            </label>
                                             <input
-                                                value={manualForm.yearsOfExperience}
-                                                onChange={e => setManualForm({ ...manualForm, yearsOfExperience: e.target.value })}
-                                                placeholder="e.g. 10+ Years"
-                                                className="w-full p-4 rounded-xl bg-secondary/30 border border-border outline-none focus:border-gold/50 font-bold"
+                                                type="number"
+                                                min="0"
+                                                max="50"
+                                                value={parseYears(manualForm.yearsOfExperience)}
+                                                onChange={e => { setManualForm({ ...manualForm, yearsOfExperience: e.target.value ? formatYears(e.target.value) : '' }); setFormErrors(fe => ({ ...fe, yearsOfExperience: '' })); }}
+                                                placeholder="e.g. 10"
+                                                className={cn("w-full p-4 rounded-xl bg-secondary/30 border outline-none font-bold transition-colors", formErrors.yearsOfExperience ? 'border-destructive focus:border-destructive' : 'border-border focus:border-gold/50')}
                                             />
+                                            {formErrors.yearsOfExperience
+                                                ? <p className="text-[10px] text-destructive font-bold ml-1">{formErrors.yearsOfExperience}</p>
+                                                : manualForm.yearsOfExperience && <p className="text-[10px] text-gold font-bold ml-1">{formatYears(manualForm.yearsOfExperience)}</p>
+                                            }
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nationality / Visa Status</label>
+                                            <label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", formErrors.nationality ? 'text-destructive' : 'text-muted-foreground')}>
+                                                Nationality / Visa Status <span className="text-destructive">*</span>
+                                            </label>
                                             <input
                                                 value={manualForm.nationality}
-                                                onChange={e => setManualForm({ ...manualForm, nationality: e.target.value })}
+                                                onChange={e => { setManualForm({ ...manualForm, nationality: e.target.value }); setFormErrors(fe => ({ ...fe, nationality: '' })); }}
                                                 placeholder="e.g. Brazilian (Requires Blue Card)"
-                                                className="w-full p-4 rounded-xl bg-secondary/30 border border-border outline-none focus:border-gold/50 font-bold"
+                                                className={cn("w-full p-4 rounded-xl bg-secondary/30 border outline-none font-bold transition-colors", formErrors.nationality ? 'border-destructive focus:border-destructive' : 'border-border focus:border-gold/50')}
                                             />
+                                            {formErrors.nationality && <p className="text-[10px] text-destructive font-bold ml-1">{formErrors.nationality}</p>}
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Assignment Tier</label>
+                                            <label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", formErrors.badgeType ? 'text-destructive' : 'text-muted-foreground')}>
+                                                Assignment Tier <span className="text-destructive">*</span>
+                                            </label>
                                             <select
                                                 value={manualForm.badgeType}
-                                                onChange={e => setManualForm({ ...manualForm, badgeType: e.target.value as any })}
-                                                className="w-full p-4 rounded-xl bg-secondary/30 border border-border outline-none focus:border-gold/50 font-bold appearance-none"
+                                                onChange={e => { setManualForm({ ...manualForm, badgeType: e.target.value as any }); setFormErrors(fe => ({ ...fe, badgeType: '' })); }}
+                                                className={cn("w-full p-4 rounded-xl bg-secondary/30 border outline-none font-bold appearance-none transition-colors", formErrors.badgeType ? 'border-destructive focus:border-destructive' : 'border-border focus:border-gold/50')}
                                             >
+                                                <option value="" disabled>Select Tier</option>
                                                 <option value="none">Standard Placement</option>
                                                 <option value="blue">Verified Blue Badge</option>
                                                 <option value="gold">Premium Gold Tier</option>
                                             </select>
+                                            {formErrors.badgeType && <p className="text-[10px] text-destructive font-bold ml-1">{formErrors.badgeType}</p>}
                                         </div>
                                         <div className="md:col-span-2 space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Technical Stack (Comma Separated)</label>
+                                            <label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", formErrors.skills ? 'text-destructive' : 'text-muted-foreground')}>
+                                                Technical Stack (Comma Separated) <span className="text-destructive">*</span>
+                                            </label>
                                             <input
                                                 value={manualForm.skills}
-                                                onChange={e => setManualForm({ ...manualForm, skills: e.target.value })}
+                                                onChange={e => { setManualForm({ ...manualForm, skills: e.target.value }); setFormErrors(fe => ({ ...fe, skills: '' })); }}
                                                 placeholder="e.g. Docker, Python, Go, Cybersecurity"
-                                                className="w-full p-4 rounded-xl bg-secondary/30 border border-border outline-none focus:border-gold/50 font-bold"
+                                                className={cn("w-full p-4 rounded-xl bg-secondary/30 border outline-none font-bold transition-colors", formErrors.skills ? 'border-destructive focus:border-destructive' : 'border-border focus:border-gold/50')}
                                             />
+                                            {formErrors.skills && <p className="text-[10px] text-destructive font-bold ml-1">{formErrors.skills}</p>}
                                         </div>
                                         <div className="md:col-span-2 space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Vetting Synopsis</label>
+                                            <label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", formErrors.experience ? 'text-destructive' : 'text-muted-foreground')}>
+                                                Vetting Synopsis <span className="text-destructive">*</span>
+                                            </label>
                                             <textarea
                                                 rows={3}
                                                 value={manualForm.experience}
-                                                onChange={e => setManualForm({ ...manualForm, experience: e.target.value })}
+                                                onChange={e => { setManualForm({ ...manualForm, experience: e.target.value }); setFormErrors(fe => ({ ...fe, experience: '' })); }}
                                                 placeholder="Summarize why this external candidate is a match for the target persona..."
-                                                className="w-full p-4 rounded-xl bg-secondary/30 border border-border outline-none focus:border-gold/50 resize-none font-bold"
+                                                className={cn("w-full p-4 rounded-xl bg-secondary/30 border outline-none resize-none font-bold transition-colors", formErrors.experience ? 'border-destructive focus:border-destructive' : 'border-border focus:border-gold/50')}
                                             />
+                                            {formErrors.experience && <p className="text-[10px] text-destructive font-bold ml-1">{formErrors.experience}</p>}
                                         </div>
                                     </div>
 
                                     <button
-                                        disabled={linking || !manualForm.fullName}
+                                        disabled={linking}
                                         onClick={handleManualSuggest}
                                         className="w-full py-5 rounded-2xl bg-gold text-navy font-black uppercase tracking-[0.2em] text-sm shadow-xl shadow-gold/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                                     >
@@ -540,20 +736,52 @@ const TalentDemandFulfillment = () => {
                                                         {c.id.startsWith('ext-') ? 'Injected Match' : 'Pool Candidate'}
                                                     </p>
                                                 </div>
-                                                <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all">
+                                                <button
+                                                    onClick={() => handleRemoveCandidate(id)}
+                                                    className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+                                                    title="Remove from manifest"
+                                                >
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
-                                            <div className="mt-3 flex items-center justify-between">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-[8px] font-bold text-success flex items-center gap-1">
-                                                        <BadgeEuro className="w-3 h-3" /> Quote Active
-                                                    </span>
-                                                    <span className="text-[7px] font-black text-gold uppercase tracking-widest bg-gold/5 px-1 rounded">
-                                                        Multi-tier Options Gen
-                                                    </span>
+                                            <div className="mt-4 pt-3 border-t border-border/50">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground w-16 shrink-0">Quote:</p>
+                                                    {editingQuoteId === id ? (
+                                                        <div className="flex flex-col flex-1">
+                                                            <div className="flex items-center gap-1">
+                                                                <input
+                                                                    autoFocus
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={parseCurrency(candidateQuotes[id] || '') || ''}
+                                                                    onChange={e => setCandidateQuotes(prev => ({ ...prev, [id]: formatCurrency(e.target.value) }))}
+                                                                    placeholder="12500"
+                                                                    className="w-full min-w-[80px] px-2 py-1.5 rounded-lg bg-background border border-gold/40 text-success font-display font-bold text-sm outline-none placeholder:text-muted-foreground/50 text-right"
+                                                                    onKeyDown={e => e.key === 'Enter' && handleUpdateCandidateQuote(id)}
+                                                                />
+                                                                <button onClick={() => handleUpdateCandidateQuote(id)} className="p-1.5 rounded bg-success/10 text-success hover:bg-success hover:text-white transition-all">
+                                                                    <Check className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                            <span className="text-[9px] text-muted-foreground ml-1 mt-1 font-bold text-right mr-9">
+                                                                Preview: {candidateQuotes[id] ? formatCurrency(candidateQuotes[id]) : '€0'}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex-1 flex items-center justify-end gap-2">
+                                                            <p className="text-sm font-bold text-success truncate">
+                                                                {candidateQuotes[id] ? candidateQuotes[id] : 'Generating...'}
+                                                            </p>
+                                                            <button 
+                                                                onClick={() => setEditingQuoteId(id)}
+                                                                className="p-1 rounded text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+                                                            >
+                                                                <Pencil className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <LinkIcon className="w-3 h-3 text-gold opacity-50" />
                                             </div>
                                         </motion.div>
                                     );
@@ -576,15 +804,52 @@ const TalentDemandFulfillment = () => {
                                                 <p className="text-xs font-bold text-foreground truncate">{p.fullName}</p>
                                                 <p className="text-[9px] text-success uppercase font-black tracking-tighter">External Injected</p>
                                             </div>
-                                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all">
+                                            <button
+                                                onClick={() => handleRemoveCandidate(p.id)}
+                                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+                                                title="Remove from manifest"
+                                            >
                                                 <Trash2 className="w-3.5 h-3.5" />
                                             </button>
                                         </div>
-                                        <div className="mt-3 flex items-center justify-between">
-                                            <span className="text-[8px] font-bold text-success flex items-center gap-1">
-                                                <BadgeEuro className="w-3 h-3" /> Quote Active
-                                            </span>
-                                            <Globe className="w-3 h-3 text-success opacity-50" />
+                                        <div className="mt-4 pt-3 border-t border-border/50">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground w-16 shrink-0">Quote:</p>
+                                                {editingQuoteId === p.id ? (
+                                                    <div className="flex flex-col flex-1">
+                                                        <div className="flex items-center gap-1">
+                                                            <input
+                                                                autoFocus
+                                                                type="number"
+                                                                min="0"
+                                                                value={parseCurrency(candidateQuotes[p.id] || '') || ''}
+                                                                onChange={e => setCandidateQuotes(prev => ({ ...prev, [p.id]: formatCurrency(e.target.value) }))}
+                                                                placeholder="12500"
+                                                                className="w-full min-w-[80px] px-2 py-1.5 rounded-lg bg-background border border-gold/40 text-success font-display font-bold text-sm outline-none placeholder:text-muted-foreground/50 text-right"
+                                                                onKeyDown={e => e.key === 'Enter' && handleUpdateCandidateQuote(p.id)}
+                                                            />
+                                                            <button onClick={() => handleUpdateCandidateQuote(p.id)} className="p-1.5 rounded bg-success/10 text-success hover:bg-success hover:text-white transition-all">
+                                                                <Check className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                        <span className="text-[9px] text-muted-foreground ml-1 mt-1 font-bold text-right mr-9">
+                                                            Preview: {candidateQuotes[p.id] ? formatCurrency(candidateQuotes[p.id]) : '€0'}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex-1 flex items-center justify-end gap-2">
+                                                        <p className="text-sm font-bold text-success truncate">
+                                                            {candidateQuotes[p.id] ? candidateQuotes[p.id] : 'Generating...'}
+                                                        </p>
+                                                        <button 
+                                                            onClick={() => setEditingQuoteId(p.id)}
+                                                            className="p-1 rounded text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+                                                        >
+                                                            <Pencil className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </motion.div>
                                 ))}
@@ -602,9 +867,9 @@ const TalentDemandFulfillment = () => {
                             <div className="p-6 rounded-2xl bg-navy text-white space-y-4 shadow-xl shadow-navy/20">
                                 <div className="flex items-center justify-between">
                                     <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Total Yield</p>
-                                    <p className="text-xl font-display font-bold text-gold">€{(linkedCount * 12500).toLocaleString()}</p>
+                                    <p className="text-xl font-display font-bold text-gold">{formatCurrency(calculateTotalYield().toString())}</p>
                                 </div>
-                                <p className="text-[9px] opacity-60 italic leading-relaxed">This estimate includes standard placement fees, visa processing, and relocation support per candidate.</p>
+                                <p className="text-[9px] opacity-60 italic leading-relaxed">This estimate is the customized sum of the individual profile quotes above.</p>
                                 <button className="w-full py-3 rounded-xl bg-gold text-navy font-black uppercase tracking-widest text-[10px] hover:bg-white transition-all">
                                     Export Manifest
                                 </button>

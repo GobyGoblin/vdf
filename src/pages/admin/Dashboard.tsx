@@ -198,7 +198,7 @@ const AdminDashboard = () => {
                 {recentPending.map((item) => (
                   <Link
                     key={item.id}
-                    to={`/admin/reviews/${item.user?.email?.split('@')[0] || 'unknown'}`}
+                    to={`/admin/reviews/${item.userId || item.id}`}
                     className="flex items-center gap-3 p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
                   >
                     <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center">

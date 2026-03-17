@@ -250,6 +250,40 @@ const seedDatabase = async () => {
           profileScore: 80,
         },
       },
+      {
+        email: 'inactive@example.com',
+        firstName: 'Inactive',
+        lastName: 'Igor',
+        lastActiveAt: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000),
+        profile: {
+          phone: '+49 30 99999999',
+          address: 'Inactive Street 1',
+          city: 'Berlin',
+          country: 'Germany',
+          bio: 'I have not logged in for a while.',
+          skills: ['Ghosting'],
+          experience: [],
+          education: [],
+          profileScore: 10,
+        },
+      },
+      {
+        email: 'waning@example.com',
+        firstName: 'Waning',
+        lastName: 'Will',
+        lastActiveAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+        profile: {
+          phone: '+49 30 88888888',
+          address: 'Waning Way 1',
+          city: 'Berlin',
+          country: 'Germany',
+          bio: 'I have been away for 20 days.',
+          skills: ['Fading'],
+          experience: [],
+          education: [],
+          profileScore: 15,
+        },
+      },
     ];
 
     for (const candData of candidateData) {
@@ -261,6 +295,7 @@ const seedDatabase = async () => {
         lastName: candData.lastName,
         isVerified: true,
         profileComplete: true,
+        lastActiveAt: candData.lastActiveAt || new Date(),
       });
 
       await CandidateProfile.create({

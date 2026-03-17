@@ -124,6 +124,11 @@ export const authAPI = {
     return { user };
   },
 
+  acknowledgeReactivation: async () => {
+    const response = await apiClient.post('auth/acknowledge-reactivation');
+    return response.data;
+  },
+
   logout: () => {
     removeToken();
   },
@@ -407,6 +412,16 @@ export const staffAPI = {
     return response.data;
   },
 
+  setProfileVisibility: async (userId: string, visible: boolean) => {
+    const response = await apiClient.put(`staff/users/${userId}/visibility`, { visible });
+    return response.data;
+  },
+
+  updateUserProfile: async (userId: string, data: any) => {
+    const response = await apiClient.put(`staff/users/${userId}/profile`, data);
+    return response.data;
+  },
+
   addDomain: async (domainData: any) => {
     const response = await apiClient.post('staff/domains', domainData);
     return response.data;
@@ -429,6 +444,11 @@ export const staffAPI = {
 
   updateHiringStep: async (id: string, currentStep: string, steps: any[]) => {
     const response = await apiClient.put(`staff/hiring/${id}/step`, { currentStep, steps });
+    return response.data;
+  },
+
+  getInactiveCandidates: async () => {
+    const response = await apiClient.get('staff/inactive-candidates');
     return response.data;
   },
 };
@@ -494,12 +514,32 @@ export const talentDemandsAPI = {
   },
 
   addManualProfile: async (demandId: string, profile: any) => {
-    const response = await apiClient.post(`talent-demands/${demandId}/manual-profile`, { profile });
+    const response = await apiClient.post(`talent-demands/${demandId}/manual-profile`, profile);
     return response.data;
   },
 
   updateStatus: async (demandId: string, status: TalentDemand['status']) => {
     const response = await apiClient.put(`talent-demands/${demandId}/status`, { status });
+    return response.data;
+  },
+
+  removeCandidate: async (demandId: string, candidateId: string) => {
+    const response = await apiClient.delete(`talent-demands/${demandId}/candidates/${candidateId}`);
+    return response.data;
+  },
+
+  updateCandidateQuote: async (demandId: string, candidateId: string, costEstimate: string) => {
+    const response = await apiClient.put(`talent-demands/${demandId}/candidates/${candidateId}/quote`, { costEstimate });
+    return response.data;
+  },
+
+  setManifestValue: async (demandId: string, manifestValue: string) => {
+    const response = await apiClient.put(`talent-demands/${demandId}/manifest-value`, { manifestValue });
+    return response.data;
+  },
+
+  finalize: async (demandId: string, manifestValue?: string) => {
+    const response = await apiClient.post(`talent-demands/${demandId}/finalize`, { manifestValue });
     return response.data;
   },
 
@@ -571,6 +611,11 @@ export const quotesAPI = {
 
   updateStatus: async (id: string, status: string) => {
     const response = await apiClient.patch(`quotes/${id}/status`, { status });
+    return response.data;
+  },
+
+  cancel: async (quoteId: string) => {
+    const response = await apiClient.put(`quotes/${quoteId}/cancel`);
     return response.data;
   }
 };

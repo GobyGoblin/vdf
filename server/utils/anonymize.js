@@ -16,14 +16,16 @@ export const anonymizeCandidate = (candidate, role) => {
 
     const firstName = plain.firstName || 'Candidate';
     const lastName = plain.lastName || '';
+    const hashCode = plain.id ? `#${String(plain.id).slice(-4)}` : '';
     const fullName = `${firstName} ${lastName}`.trim() || 'Candidate';
+    const anonymizedFullName = `${firstName} ${hashCode}`.trim();
 
     if (role === 'employer') {
-        // Employers only see FIRST name in the fullName field
-        plain.fullName = firstName;
+        // Employers see FIRST name + hash code
+        plain.fullName = anonymizedFullName;
 
         // Explicitly clear/obfuscate sensitive fields
-        plain.lastName = '***';
+        plain.lastName = hashCode;
         plain.firstName = firstName;
         plain.email = '********@germantalent.de';
 
@@ -44,8 +46,8 @@ export const anonymizeCandidate = (candidate, role) => {
             delete plain.candidateProfile.email;
         }
     } else {
-        // Staff and Admin see the actual FULL name
-        plain.fullName = fullName;
+        // Staff and Admin see the actual FULL name + hash code
+        plain.fullName = `${fullName} ${hashCode}`.trim();
     }
 
     // Set sector if missing (useful for the UI)

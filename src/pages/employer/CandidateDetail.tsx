@@ -17,7 +17,8 @@ import {
   BadgeEuro,
   Video,
   Target,
-  MessageSquare
+  MessageSquare,
+  XCircle
 } from 'lucide-react';
 import { talentPoolAPI, authAPI, quotesAPI, interviewAPI, CandidateStatus } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
@@ -44,6 +45,7 @@ interface Candidate {
   yearsOfExperience?: string;
   sector?: string;
   salaryExpectation?: string;
+  isHiddenByUnresponsiveness?: boolean;
 }
 
 const EmployerCandidateDetail = () => {
@@ -60,7 +62,7 @@ const EmployerCandidateDetail = () => {
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
   // Quote state
-  const [quoteStatus, setQuoteStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none');
+  const [quoteStatus, setQuoteStatus] = useState<'none' | 'pending' | 'approved' | 'rejected' | 'not_available' | 'is_alt'>('none');
   const [quoteId, setQuoteId] = useState<string | null>(null);
   const [requestingQuote, setRequestingQuote] = useState(false);
 
@@ -88,13 +90,26 @@ const EmployerCandidateDetail = () => {
       setCandidate(candResp.candidate as any);
       setDocuments(candResp.documents as any || []);
 
-      // Find existing quote for this candidate
-      const existingQuote = quoteResp.requests?.find((r: any) =>
-        r.candidateId === id && (r.status === 'pending' || r.status === 'approved')
-      );
-      if (existingQuote) {
-        setQuoteStatus(existingQuote.status);
-        setQuoteId(existingQuote.id);
+      const allQuotes = quoteResp.requests || [];
+
+      // Case 1: This candidate is the original in a quote
+      const originalQuote = allQuotes.find((r: any) => String(r.candidateId) === id);
+      // Case 2: This candidate is the alt/replacement in a quote (unresponsive case)
+      const altQuote = allQuotes.find((r: any) => String(r.altCandidateId) === id);
+
+      if (originalQuote) {
+        // If the quote has an alt candidate, the original is always NOT AVAILABLE
+        // (regardless of internal status which may have been 'approved' before the backend fix)
+        if (originalQuote.status === 'candidate_unresponsive' || originalQuote.altCandidateId) {
+          setQuoteStatus('not_available');
+        } else {
+          setQuoteStatus(originalQuote.status as any);
+        }
+        setQuoteId(originalQuote.id);
+      } else if (altQuote) {
+        // This profile IS the replacement — quote already exists, just needs viewing
+        setQuoteStatus('is_alt');
+        setQuoteId(altQuote.id);
       } else {
         setQuoteStatus('none');
         setQuoteId(null);
@@ -151,6 +166,27 @@ const EmployerCandidateDetail = () => {
 
   // Determine the primary CTA button
   const renderPrimaryAction = () => {
+    // Case: Original candidate who is NOT AVAILABLE (unresponsive) — no interactions allowed
+    if (candidate?.isHiddenByUnresponsiveness || quoteStatus === 'not_available') {
+      return (
+        <div className="w-full py-4 rounded-xl bg-orange-50 border-2 border-orange-200 text-orange-600 font-black text-sm flex items-center justify-center gap-3 tracking-widest uppercase">
+          <Clock className="w-5 h-5" /> Not Available
+        </div>
+      );
+    }
+
+    // Case: This candidate is acting as an alt for someone else's quote — show View Quote
+    if (quoteStatus === 'is_alt' && quoteId) {
+      return (
+        <Link
+          to={`/employer/quotes/${quoteId}`}
+          className="w-full py-4 rounded-xl bg-orange-500 text-white font-bold text-sm transition-all shadow-lg hover:shadow-xl hover:shadow-orange-500/20 hover:-translate-y-0.5 flex items-center justify-center gap-3"
+        >
+          <BadgeEuro className="w-5 h-5" /> View Quote
+        </Link>
+      );
+    }
+
     // Step 1: No quote yet → Request Quote
     if (quoteStatus === 'none') {
       return (
@@ -168,13 +204,16 @@ const EmployerCandidateDetail = () => {
       );
     }
 
-    // Step 2: Quote pending → Show pending + Schedule Interview button
+    // Step 2: Quote pending → Show pending status
     if (quoteStatus === 'pending') {
       return (
         <div className="space-y-3">
-          <div className="w-full py-3 rounded-xl bg-secondary border border-border text-muted-foreground font-bold text-sm flex items-center justify-center gap-3">
-            <Clock className="w-4 h-4" /> Quote Pending Review
-          </div>
+          <button
+            disabled
+            className="w-full py-4 rounded-xl bg-orange-50 border-2 border-orange-200 text-orange-600 font-bold text-sm flex items-center justify-center gap-3 cursor-not-allowed"
+          >
+            <Clock className="w-5 h-5" /> Quote Requested
+          </button>
           <button
             onClick={() => setSchedulerOpen(true)}
             className="w-full py-4 rounded-xl bg-purple-600 text-white font-bold text-sm transition-all shadow-lg hover:shadow-xl hover:shadow-purple-500/20 hover:-translate-y-0.5 flex items-center justify-center gap-3"
@@ -182,6 +221,18 @@ const EmployerCandidateDetail = () => {
             <Video className="w-5 h-5" /> {currentStatus === 'interviewed' ? 'Plan Another Interview' : 'Schedule Interview'}
           </button>
         </div>
+      );
+    }
+
+    // Step 2.5: Quote rejected → Show rejected status
+    if (quoteStatus === 'rejected') {
+      return (
+        <button
+          disabled
+          className="w-full py-4 rounded-xl bg-red-50 border-2 border-red-200 text-red-600 font-bold text-sm flex items-center justify-center gap-3 cursor-not-allowed uppercase tracking-widest"
+        >
+          <XCircle className="w-5 h-5" /> Quote Rejected
+        </button>
       );
     }
 
@@ -328,7 +379,7 @@ const EmployerCandidateDetail = () => {
               {renderPrimaryAction()}
 
               {/* Quick status buttons */}
-              {currentStatus === 'potential' && (
+              {currentStatus === 'potential' && !candidate?.isHiddenByUnresponsiveness && (
                 <button
                   onClick={async () => {
                     setUpdatingStatus(true);
@@ -461,55 +512,57 @@ const EmployerCandidateDetail = () => {
             </motion.div>
 
             {/* Recruitment Flow Guide */}
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="card-premium p-5">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Recruitment Flow</h3>
-              <div className="space-y-3">
-                <div className={cn("flex items-center gap-3 text-xs", quoteStatus !== 'none' ? "text-success" : "text-foreground font-bold")}>
-                  <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0",
-                    quoteStatus !== 'none' ? "bg-success/20" : "bg-gold/20"
-                  )}>
-                    {quoteStatus !== 'none' ? <CheckCircle2 className="w-3.5 h-3.5 text-success" /> : <span className="text-[10px] font-bold text-gold">1</span>}
+            {!candidate?.isHiddenByUnresponsiveness && (
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="card-premium p-5">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Recruitment Flow</h3>
+                <div className="space-y-3">
+                  <div className={cn("flex items-center gap-3 text-xs", quoteStatus !== 'none' ? "text-success" : "text-foreground font-bold")}>
+                    <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0",
+                      quoteStatus !== 'none' ? "bg-success/20" : "bg-gold/20"
+                    )}>
+                      {quoteStatus !== 'none' ? <CheckCircle2 className="w-3.5 h-3.5 text-success" /> : <span className="text-[10px] font-bold text-gold">1</span>}
+                    </div>
+                    Request Quote
                   </div>
-                  Request Quote
-                </div>
-                <div className={cn("flex items-center gap-3 text-xs",
-                  currentStatus === 'interviewed' || currentStatus === 'hired' ? "text-success" :
-                    quoteStatus !== 'none' ? "text-foreground font-bold" : "text-muted-foreground"
-                )}>
-                  <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0",
-                    currentStatus === 'interviewed' || currentStatus === 'hired' ? "bg-success/20" :
-                      quoteStatus !== 'none' ? "bg-purple-500/20" : "bg-secondary"
+                  <div className={cn("flex items-center gap-3 text-xs",
+                    currentStatus === 'interviewed' || currentStatus === 'hired' ? "text-success" :
+                      quoteStatus !== 'none' ? "text-foreground font-bold" : "text-muted-foreground"
                   )}>
-                    {currentStatus === 'interviewed' || currentStatus === 'hired'
-                      ? <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                      : <span className="text-[10px] font-bold text-purple-500">2</span>}
+                    <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0",
+                      currentStatus === 'interviewed' || currentStatus === 'hired' ? "bg-success/20" :
+                        quoteStatus !== 'none' ? "bg-purple-500/20" : "bg-secondary"
+                    )}>
+                      {currentStatus === 'interviewed' || currentStatus === 'hired'
+                        ? <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                        : <span className="text-[10px] font-bold text-purple-500">2</span>}
+                    </div>
+                    Schedule Interview
                   </div>
-                  Schedule Interview
-                </div>
-                <div className={cn("flex items-center gap-3 text-xs",
-                  quoteStatus === 'approved' ? "text-foreground font-bold" : "text-muted-foreground"
-                )}>
-                  <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0",
-                    quoteStatus === 'approved' ? "bg-gold/20" : "bg-secondary"
+                  <div className={cn("flex items-center gap-3 text-xs",
+                    quoteStatus === 'approved' ? "text-foreground font-bold" : "text-muted-foreground"
                   )}>
-                    <span className="text-[10px] font-bold">3</span>
+                    <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0",
+                      quoteStatus === 'approved' ? "bg-gold/20" : "bg-secondary"
+                    )}>
+                      <span className="text-[10px] font-bold">3</span>
+                    </div>
+                    Choose Plan & Pay
                   </div>
-                  Choose Plan & Pay
-                </div>
-                <div className={cn("flex items-center gap-3 text-xs",
-                  currentStatus === 'hired' ? "text-success font-bold" : "text-muted-foreground"
-                )}>
-                  <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0",
-                    currentStatus === 'hired' ? "bg-success/20" : "bg-secondary"
+                  <div className={cn("flex items-center gap-3 text-xs",
+                    currentStatus === 'hired' ? "text-success font-bold" : "text-muted-foreground"
                   )}>
-                    {currentStatus === 'hired'
-                      ? <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                      : <span className="text-[10px] font-bold">4</span>}
+                    <div className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0",
+                      currentStatus === 'hired' ? "bg-success/20" : "bg-secondary"
+                    )}>
+                      {currentStatus === 'hired'
+                        ? <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                        : <span className="text-[10px] font-bold">4</span>}
+                    </div>
+                    Hire & Onboard
                   </div>
-                  Hire & Onboard
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
             {/* Data Shield */}
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }}

@@ -1,0 +1,29 @@
+30 days ago: 2026-02-13T18:43:15.275Z
+
+Sarah Johnson (candidate1@example.com)
+  isHidden=true isDeactivated=true lastActiveAt=Mon Feb 23 2026 03:39:03 GMT+0000 (GMT)
+  isInactive=false VISIBLE=false
+
+Michael Chen (candidate2@example.com)
+  isHidden=true isDeactivated=true lastActiveAt=Sun Mar 15 2026 04:48:00 GMT+0000 (GMT)
+  isInactive=false VISIBLE=false
+
+Emma Schneider (candidate3@example.com)
+  isHidden=false isDeactivated=false lastActiveAt=Sat Mar 14 2026 23:10:34 GMT+0000 (GMT)
+  isInactive=false VISIBLE=true
+
+David Kowalski (candidate4@example.com)
+  isHidden=false isDeactivated=false lastActiveAt=Sat Mar 14 2026 23:10:34 GMT+0000 (GMT)
+  isInactive=false VISIBLE=true
+
+Inactive Igor (inactive@example.com)
+  isHidden=false isDeactivated=false lastActiveAt=Sun Mar 15 2026 05:44:31 GMT+0000 (GMT)
+  isInactive=false VISIBLE=true
+
+Waning Will (waning@example.com)
+  isHidden=false isDeactivated=false lastActiveAt=Sun Feb 22 2026 23:10:34 GMT+0000 (GMT)
+  isInactive=false VISIBLE=true
+
+Unresponsive quotes: 2
+  candidateId=18f14731-ab0f-4723-91dc-f3efc6edb225
+  candidateId=64acd938-31ae-454c-a37b-4e941600b413

@@ -107,8 +107,12 @@ const EmployerHiredCandidates = () => {
                                                 )}
                                             </div>
                                             <div>
-                                                <h3 className="font-bold text-xl text-foreground group-hover:text-gold transition-colors">{quote.candidate?.fullName}</h3>
-                                                <p className="text-sm font-medium text-muted-foreground">{quote.candidate?.sector || 'Verified Professional'}</p>
+                                                <h3 className="font-bold text-xl text-foreground group-hover:text-gold transition-colors">
+                                                    {quote.altCandidate?.fullName || quote.candidate?.fullName}
+                                                </h3>
+                                                <p className="text-sm font-medium text-muted-foreground">
+                                                    {quote.altCandidate?.sector || quote.candidate?.sector || 'Verified Professional'}
+                                                </p>
                                             </div>
                                         </div>
 

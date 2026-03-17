@@ -118,11 +118,16 @@ router.post('/:id/suggest', authorize('staff', 'admin'), async (req, res) => {
         if (!demand) return res.status(404).json({ error: 'Demand not found' });
 
         const { candidateId } = req.body;
-        const ids = demand.suggestedCandidateIds || [];
+        let ids = demand.suggestedCandidateIds || [];
+        if (typeof ids === 'string') {
+            try { ids = JSON.parse(ids); } catch(e) { ids = []; }
+        }
 
         if (!ids.includes(candidateId)) {
-            ids.push(candidateId);
-            await demand.update({ suggestedCandidateIds: ids });
+            const newIds = [...ids, candidateId];
+            demand.suggestedCandidateIds = newIds;
+            demand.changed('suggestedCandidateIds', true); // Force sequelize to recognize JSON change
+            await demand.save();
 
             // Auto-create approved quote
             await QuoteRequest.create({
@@ -178,36 +183,77 @@ router.post('/:id/manual-profile', authorize('staff', 'admin'), async (req, res)
         if (!demand) return res.status(404).json({ error: 'Demand not found' });
 
         const profile = req.body;
-        const names = (profile.fullName || 'External Match').split(' ');
+        
+        // Check if a candidate with this email already exists
+        const emailToUse = profile.email ? profile.email.toLowerCase().trim() : null;
+        if (emailToUse) {
+            const existing = await User.findOne({ where: { email: emailToUse, role: 'candidate' } });
+            if (existing) {
+                // If they already exist, just link them to the demand!
+                let ids = demand.suggestedCandidateIds || [];
+                if (typeof ids === 'string') {
+                    try { ids = JSON.parse(ids); } catch(e) { ids = []; }
+                }
+                if (!ids.includes(existing.id)) {
+                    demand.suggestedCandidateIds = [...ids, existing.id];
+                    demand.changed('suggestedCandidateIds', true);
+                    await demand.save();
+                }
+                const result = existing.toJSON();
+                delete result.password;
+                return res.status(200).json({ success: true, profile: result, message: 'Existing candidate re-linked to manifest.' });
+            }
+        }
+
+        const fName = profile.firstName || 'External';
+        const lName = profile.lastName || 'Match';
         const candidateId = `ext-${crypto.randomUUID().slice(0, 9)}`;
 
-        const hashedPassword = await bcrypt.hash('password123', 10);
-        const newCandidate = await User.create({
-            id: candidateId,
-            email: profile.email || `${candidateId}@germantalent.de`,
-            password: hashedPassword,
-            role: 'candidate',
-            firstName: names[0],
-            lastName: names.length > 1 ? names.slice(1).join(' ') : 'Ext Match',
-            isVerified: true,
-            badgeType: profile.badgeType || 'none',
-            sector: profile.sector || 'Expert',
-            yearsOfExperience: profile.yearsOfExperience || '5+ Years',
-            nationality: profile.nationality || 'International',
-        });
+        const generatedPassword = crypto.randomBytes(8).toString('hex');
+        const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+        
+        let newCandidate;
+        try {
+            newCandidate = await User.create({
+                id: candidateId,
+                email: emailToUse || `${candidateId}@germantalent.de`,
+                password: hashedPassword,
+                role: 'candidate',
+                firstName: fName,
+                lastName: lName,
+                isVerified: true,
+                badgeType: profile.badgeType || 'none',
+                sector: profile.sector || 'Expert',
+                yearsOfExperience: profile.yearsOfExperience || '5+ Years',
+                nationality: profile.nationality || 'International',
+            });
+        } catch (dbError) {
+            if (dbError.name === 'SequelizeUniqueConstraintError') {
+                return res.status(400).json({ error: 'A candidate with this email already exists in the system.' });
+            }
+            throw dbError; // Rethrow to be caught by the outer catch
+        }
 
         // Create profile
         await CandidateProfile.create({
             userId: candidateId,
             skills: profile.skills || [],
             bio: profile.experience || 'Candidate curated through external sourcing.',
+            phone: profile.phone || null,
+            linkedIn: profile.linkedIn || null,
         });
 
         // Link to demand
-        const ids = demand.suggestedCandidateIds || [];
+        let ids = demand.suggestedCandidateIds || [];
+        if (typeof ids === 'string') {
+            try { ids = JSON.parse(ids); } catch(e) { ids = []; }
+        }
+
         if (!ids.includes(candidateId)) {
-            ids.push(candidateId);
-            await demand.update({ suggestedCandidateIds: ids });
+            const newIds = [...ids, candidateId];
+            demand.suggestedCandidateIds = newIds;
+            demand.changed('suggestedCandidateIds', true); // Force sequelize to recognize JSON change
+            await demand.save();
         }
 
         // Auto create approved quote
@@ -251,7 +297,7 @@ router.post('/:id/manual-profile', authorize('staff', 'admin'), async (req, res)
 
         const result = newCandidate.toJSON();
         delete result.password;
-        res.status(201).json({ success: true, profile: result });
+        res.status(201).json({ success: true, profile: result, generatedPassword });
     } catch (err) {
         console.error('Add manual profile error:', err);
         res.status(500).json({ error: 'Internal server error' });
@@ -268,6 +314,134 @@ router.put('/:id/status', authorize('staff', 'admin'), async (req, res) => {
         res.json({ success: true, demand });
     } catch (err) {
         console.error('Update demand status error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ── Remove candidate from manifest (staff/admin) ───────────────────────
+router.delete('/:id/candidates/:candidateId', authorize('staff', 'admin'), async (req, res) => {
+    try {
+        const demand = await TalentDemand.findByPk(req.params.id);
+        if (!demand) return res.status(404).json({ error: 'Demand not found' });
+
+        let ids = demand.suggestedCandidateIds || [];
+        if (typeof ids === 'string') {
+            try { ids = JSON.parse(ids); } catch(e) { ids = []; }
+        }
+
+        const updated = ids.filter(cid => cid !== req.params.candidateId);
+        demand.suggestedCandidateIds = updated;
+        demand.changed('suggestedCandidateIds', true);
+        await demand.save();
+
+        res.json({ success: true, suggestedCandidateIds: updated });
+    } catch (err) {
+        console.error('Remove candidate error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ── Update specific candidate quote (staff/admin) ──────────────────────
+router.put('/:id/candidates/:candidateId/quote', authorize('staff', 'admin'), async (req, res) => {
+    try {
+        const demand = await TalentDemand.findByPk(req.params.id);
+        if (!demand) return res.status(404).json({ error: 'Demand not found' });
+
+        const { costEstimate } = req.body;
+        let quote = await QuoteRequest.findOne({ 
+            where: { employerId: demand.employerId, candidateId: req.params.candidateId } 
+        });
+
+        if (!quote) {
+            quote = await QuoteRequest.create({
+                employerId: demand.employerId,
+                candidateId: req.params.candidateId,
+                status: 'approved',
+                requestedAt: new Date(),
+                resolvedAt: new Date(),
+                costEstimate: costEstimate,
+                items: [
+                    { label: 'Placement Fee', amount: 8500, description: 'Standard recruitment and processing' },
+                    { label: 'Relocation Support', amount: 2500, description: 'Logistics and initial housing assistance' },
+                    { label: 'Onboarding Package', amount: 1500, description: 'Integration and visa handling fees' },
+                ],
+                options: [
+                    {
+                        id: crypto.randomUUID(),
+                        name: 'Custom Placement',
+                        costEstimate: costEstimate,
+                        perks: ['Standard Placement', 'Basic Support'],
+                        items: [
+                            { label: 'Placement Fee', amount: 8500, description: 'Standard recruitment and processing' },
+                            { label: 'Relocation Support', amount: 2500, description: 'Logistics and housing' },
+                            { label: 'Onboarding Package', amount: 1500, description: 'Integration fees' },
+                        ],
+                    }
+                ],
+            });
+        }
+
+        quote.costEstimate = costEstimate;
+        let options = quote.options || [];
+        // Update the string on the options as well so the frontend displays the new amount
+        for (let opt of options) {
+            opt.costEstimate = costEstimate;
+        }
+        quote.options = options;
+        quote.changed('options', true);
+        await quote.save();
+        return res.json({ success: true, quote });
+    } catch (err) {
+        console.error('Update quote error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ── Set manifest value (staff/admin) ───────────────────────────────────
+router.put('/:id/manifest-value', authorize('staff', 'admin'), async (req, res) => {
+    try {
+        const demand = await TalentDemand.findByPk(req.params.id);
+        if (!demand) return res.status(404).json({ error: 'Demand not found' });
+
+        await demand.update({ manifestValue: req.body.manifestValue });
+        res.json({ success: true, manifestValue: req.body.manifestValue });
+    } catch (err) {
+        console.error('Set manifest value error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ── Finalize bundle (staff/admin) ──────────────────────────────────────
+router.post('/:id/finalize', authorize('staff', 'admin'), async (req, res) => {
+    try {
+        const demand = await TalentDemand.findByPk(req.params.id);
+        if (!demand) return res.status(404).json({ error: 'Demand not found' });
+
+        let ids = demand.suggestedCandidateIds || [];
+        if (typeof ids === 'string') {
+            try { ids = JSON.parse(ids); } catch (e) { ids = []; }
+        }
+
+        if (!Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'Cannot finalize an empty manifest. Add at least one candidate.' });
+        }
+
+        await demand.update({
+            status: 'treated',
+            finalizedAt: new Date(),
+            manifestValue: req.body.manifestValue || demand.manifestValue,
+        });
+
+        await AuditLog.create({
+            userId: req.user.id,
+            action: 'DEMAND_FINALIZED',
+            details: `${req.user.email} finalized demand "${demand.title}" with ${demand.suggestedCandidateIds.length} candidate(s). Value: ${demand.manifestValue || 'unset'}`,
+            ipAddress: req.ip,
+        });
+
+        res.json({ success: true, demand });
+    } catch (err) {
+        console.error('Finalize bundle error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

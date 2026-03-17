@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 
 // Static imports for Vercel bundler
 import bcrypt from 'bcryptjs';
-import { User } from './models/index.js';
+import { User, QuoteRequest } from './models/index.js';
 
 // Load env FIRST
 dotenv.config();
@@ -147,6 +147,40 @@ const startServer = async () => {
     } catch (syncError) {
       console.warn('⚠️  Database sync warning:', syncError.message);
       console.log('Continuing with existing database structure...');
+    }
+
+    // ── Safe Production Migration for missing columns ─────────────────────
+    try {
+      const dbDialect = sequelize.getDialect();
+      if (dbDialect === 'sqlite') {
+        const [results] = await sequelize.query(`PRAGMA table_info(TalentDemands);`);
+        const columns = results.map(col => col.name);
+        
+        if (!columns.includes('manifestValue')) {
+          await sequelize.query(`ALTER TABLE TalentDemands ADD COLUMN manifestValue VARCHAR(255);`);
+          console.log('✅ Manually added manifestValue column to TalentDemands');
+        }
+        if (!columns.includes('finalizedAt')) {
+          await sequelize.query(`ALTER TABLE TalentDemands ADD COLUMN finalizedAt DATETIME;`);
+          console.log('✅ Manually added finalizedAt column to TalentDemands');
+        }
+      }
+    } catch (migError) {
+      console.warn('⚠️ Manual migration warning:', migError.message);
+    }
+
+    // ── Sync unresponsive candidate flags from existing quotes ────────────
+    try {
+      const unresponsiveQuotes = await QuoteRequest.findAll({ where: { status: 'candidate_unresponsive' } });
+      for (const quote of unresponsiveQuotes) {
+        const candidate = await User.findByPk(quote.candidateId);
+        if (candidate && !candidate.isHiddenByUnresponsiveness) {
+          await candidate.update({ isHiddenByUnresponsiveness: true, isDeactivated: true });
+          console.log(`✅ Auto-hidden unresponsive candidate: ${candidate.email}`);
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️  Could not sync unresponsive flags:', e.message);
     }
 
     // Use existing imports for default admin user setup

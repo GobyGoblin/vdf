@@ -48,6 +48,10 @@ export const User = sequelize.define('User', {
   suggestedPlacementCost: { type: DataTypes.STRING, allowNull: true },
   avatarUrl: { type: DataTypes.STRING, allowNull: true },
   rejectionReason: { type: DataTypes.TEXT, allowNull: true },
+  lastActiveAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  isDeactivated: { type: DataTypes.BOOLEAN, defaultValue: false },
+  isHiddenByUnresponsiveness: { type: DataTypes.BOOLEAN, defaultValue: false },
+  showReactivationPopup: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, { timestamps: true });
 
 // ─── Candidate Profile ─────────────────────────────────────────────────
@@ -301,6 +305,12 @@ export const QuoteRequest = sequelize.define('QuoteRequest', {
   options: { type: DataTypes.JSON, defaultValue: [] },
   selectedOptionId: { type: DataTypes.STRING, allowNull: true },
   hiringProcess: { type: DataTypes.JSON, allowNull: true },
+  altCandidateId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: { model: 'Users', key: 'id' },
+  },
+  unresponsiveAt: { type: DataTypes.DATE, allowNull: true },
 }, { timestamps: true });
 
 // ─── Talent Demand Model ───────────────────────────────────────────────
@@ -338,6 +348,8 @@ export const TalentDemand = sequelize.define('TalentDemand', {
   visaSupport: { type: DataTypes.BOOLEAN, defaultValue: false },
   suggestedCandidateIds: { type: DataTypes.JSON, defaultValue: [] },
   manualProfiles: { type: DataTypes.JSON, defaultValue: [] },
+  manifestValue: { type: DataTypes.STRING, allowNull: true },
+  finalizedAt: { type: DataTypes.DATE, allowNull: true },
   status: {
     type: DataTypes.ENUM('open', 'treating', 'treated', 'cancelled'),
     defaultValue: 'open',
@@ -436,6 +448,7 @@ User.hasMany(QuoteRequest, { foreignKey: 'employerId', as: 'sentQuoteRequests' }
 User.hasMany(QuoteRequest, { foreignKey: 'candidateId', as: 'receivedQuoteRequests' });
 QuoteRequest.belongsTo(User, { foreignKey: 'employerId', as: 'employer' });
 QuoteRequest.belongsTo(User, { foreignKey: 'candidateId', as: 'candidate' });
+QuoteRequest.belongsTo(User, { foreignKey: 'altCandidateId', as: 'altCandidate' });
 
 // Talent Demands
 User.hasMany(TalentDemand, { foreignKey: 'employerId', as: 'talentDemands' });

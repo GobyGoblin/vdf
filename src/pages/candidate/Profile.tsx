@@ -25,6 +25,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CustomDialog } from '@/components/ui/custom-dialog';
 import { useCustomDialog } from '@/hooks/use-custom-dialog';
 import { cn } from '@/lib/utils';
+import { formatYears, formatCurrency, parseYears } from '@/lib/formatters';
 
 const CandidateProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -332,26 +333,30 @@ const CandidateProfile = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Exp. Years *</label>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Exp. Years <span className="text-destructive">*</span></label>
                     <input
-                      type="text"
-                      value={profile.yearsOfExperience || ''}
-                      onChange={(e) => setProfile({ ...profile, yearsOfExperience: e.target.value })}
+                      type="number"
+                      min="0"
+                      max="50"
+                      value={parseYears(profile.yearsOfExperience || '')}
+                      onChange={(e) => setProfile({ ...profile, yearsOfExperience: e.target.value ? formatYears(e.target.value) : '' })}
                       className="input-premium"
                       placeholder="e.g. 5"
                       disabled={isPending}
                     />
+                    {profile.yearsOfExperience && <p className="text-[10px] text-gold font-bold mt-1 ml-1">{formatYears(profile.yearsOfExperience)}</p>}
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><BadgeEuro className="w-3 h-3" /> Salary Exp. *</label>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5"><BadgeEuro className="w-3 h-3" /> Salary Exp. <span className="text-destructive">*</span></label>
                     <input
                       type="text"
                       value={profile.salaryExpectation || ''}
-                      onChange={(e) => setProfile({ ...profile, salaryExpectation: e.target.value })}
+                      onChange={(e) => setProfile({ ...profile, salaryExpectation: e.target.value.replace(/[^\d]/g, '') })}
                       className="input-premium"
-                      placeholder="e.g. 60,000"
+                      placeholder="e.g. 60000"
                       disabled={isPending}
                     />
+                    {profile.salaryExpectation && <p className="text-[10px] text-gold font-bold mt-1 ml-1">{formatCurrency(profile.salaryExpectation, '/yr')}</p>}
                   </div>
                 </div>
               </div>

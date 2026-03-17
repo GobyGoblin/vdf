@@ -27,8 +27,11 @@ import {
   BadgeEuro,
   Target,
   Calculator,
-  Video
+  Video,
+  AlertTriangle,
+  Sparkles
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 // Use the logo from public folder
 const logo = '/logo.png';
 import { BackToTop } from '@/components/ui/BackToTop';
@@ -173,15 +176,34 @@ export const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
   const [user, setUser] = useState<any>(() => getCurrentUser());
   const [notifications, setNotifications] = useState<{ id: string, title: string, href: string }[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showReactivationModal, setShowReactivationModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const navigation = navigationByRole[role];
+
+  const handleAcknowledgeReactivation = async () => {
+    try {
+      await authAPI.acknowledgeReactivation();
+      setShowReactivationModal(false);
+      // Update local user state
+      const updatedUser = { ...user, showReactivationPopup: false };
+      setUser(updatedUser);
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    } catch (err) {
+      console.error('Failed to acknowledge reactivation:', err);
+      setShowReactivationModal(false);
+    }
+  };
 
   useEffect(() => {
     const loadUser = async () => {
       try {
         const { user: userData } = await authAPI.getMe();
         setUser(userData);
+
+        if (userData.showReactivationPopup) {
+          setShowReactivationModal(true);
+        }
 
         // Final safety check: if the user's actual role doesn't match the layout's role
         if (userData.role !== role && userData.role !== 'admin') {
@@ -465,6 +487,72 @@ export const DashboardLayout = ({ children, role }: DashboardLayoutProps) => {
         </main>
       </div>
       <BackToTop />
+
+      {/* Reactivation Modal */}
+      <AnimatePresence>
+        {showReactivationModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-navy/60 backdrop-blur-md"
+              onClick={handleAcknowledgeReactivation}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-8">
+                <button onClick={handleAcknowledgeReactivation} className="text-slate-400 hover:text-slate-600 transition-colors">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-10 text-center space-y-6">
+                <div className="w-20 h-20 bg-gold/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-gold/10 relative">
+                    <Sparkles className="w-10 h-10 text-gold" />
+                    <motion.div 
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="absolute inset-0 bg-gold/5 rounded-[2rem]" 
+                    />
+                </div>
+
+                <div className="space-y-3">
+                  <h2 className="text-3xl font-display font-bold text-slate-900 leading-tight">
+                    Welcome Back! <br /> Your Profile is Active.
+                  </h2>
+                  <p className="text-slate-500 text-lg">
+                    Because we didn't hear from you for a while, your profile was temporarily hidden to maintain pipeline quality.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex items-start gap-4 text-left">
+                  <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm border border-slate-100">
+                    <AlertTriangle className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">Visibility Restored</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed mt-1">
+                      Employers can now see your profile in the talent pool again. Ensure your details are up to date to receive new inquiries.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleAcknowledgeReactivation}
+                  className="w-full py-5 bg-navy text-white rounded-2xl font-bold uppercase tracking-widest hover:bg-gold hover:text-navy transition-all shadow-xl shadow-navy/10 hover:shadow-gold/20"
+                >
+                  Understood, let's go!
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

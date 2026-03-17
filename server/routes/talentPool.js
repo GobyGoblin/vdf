@@ -20,7 +20,13 @@ router.get('/candidates', async (req, res) => {
             if (!me?.isVerified) return res.json({ candidates: [] });
         }
 
-        const where = { role: 'candidate' };
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const where = { 
+          role: 'candidate',
+          isDeactivated: false,
+          isHiddenByUnresponsiveness: false,
+          lastActiveAt: { [Op.gt]: thirtyDaysAgo }
+        };
         if (req.query.verified === 'true') where.isVerified = true;
 
         let candidates = await User.findAll({
@@ -123,13 +129,19 @@ router.get('/my-quotes', authorize('employer'), async (req, res) => {
 
         const requests = await QuoteRequest.findAll({
             where: { employerId: req.user.id },
-            include: [{ model: User, as: 'candidate', attributes: { exclude: ['password'] } }],
+            include: [
+                { model: User, as: 'candidate', attributes: { exclude: ['password'] } },
+                { model: User, as: 'altCandidate', attributes: { exclude: ['password'] } }
+            ],
             order: [['createdAt', 'DESC']],
         });
 
         const enriched = requests.map(r => {
             const plain = r.toJSON();
             plain.candidate = anonymize(plain.candidate, req.user.role);
+            if (plain.altCandidate) {
+                plain.altCandidate = anonymize(plain.altCandidate, req.user.role);
+            }
             return plain;
         });
 
@@ -145,12 +157,18 @@ router.get('/quotes/:id', authorize('employer'), async (req, res) => {
     try {
         const request = await QuoteRequest.findOne({
             where: { id: req.params.id, employerId: req.user.id },
-            include: [{ model: User, as: 'candidate', attributes: { exclude: ['password'] } }],
+            include: [
+                { model: User, as: 'candidate', attributes: { exclude: ['password'] } },
+                { model: User, as: 'altCandidate', attributes: { exclude: ['password'] } }
+            ],
         });
         if (!request) return res.status(404).json({ error: 'Quote request not found' });
 
         const plain = request.toJSON();
         plain.candidate = anonymize(plain.candidate, req.user.role);
+        if (plain.altCandidate) {
+            plain.altCandidate = anonymize(plain.altCandidate, req.user.role);
+        }
         res.json({ request: plain });
     } catch (err) {
         console.error('Get quote error:', err);
@@ -173,7 +191,11 @@ router.put('/quotes/:id/select-option', authorize('employer'), async (req, res) 
             selected: opt.id === optionId,
         }));
 
-        await request.update({ options: updatedOptions, selectedOptionId: optionId });
+        await request.update({ 
+            options: updatedOptions, 
+            selectedOptionId: optionId,
+            status: 'approved' // Synchronize status when an option is selected
+        });
 
         await AuditLog.create({
             userId: req.user.id,

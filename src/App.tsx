@@ -39,7 +39,6 @@ import EmployerCandidateManagement from "./pages/employer/CandidateManagement";
 import EmployerQuotes from "./pages/employer/MyQuotes";
 import EmployerQuoteOptions from "./pages/employer/QuoteOptions";
 import EmployerQuotePayment from "./pages/employer/QuotePayment";
-import EmployerQuoteReceipt from "./pages/employer/QuoteReceipt";
 import EmployerTalentDemands from "./pages/employer/TalentDemands";
 import EmployerInterviews from "./pages/employer/Interviews";
 import EmployerVerificationPayment from "./pages/employer/VerificationPayment";
@@ -117,7 +116,6 @@ const App = () => (
           <Route path="/employer/quotes" element={<ProtectedRoute allowedRoles={['employer']}><EmployerQuotes /></ProtectedRoute>} />
           <Route path="/employer/quotes/:id" element={<ProtectedRoute allowedRoles={['employer']}><EmployerQuoteOptions /></ProtectedRoute>} />
           <Route path="/employer/quotes/:id/payment" element={<ProtectedRoute allowedRoles={['employer']}><EmployerQuotePayment /></ProtectedRoute>} />
-          <Route path="/employer/quotes/:id/receipt" element={<ProtectedRoute allowedRoles={['employer']}><EmployerQuoteReceipt /></ProtectedRoute>} />
           <Route path="/employer/quotes/:id/tracking" element={<ProtectedRoute allowedRoles={['employer']}><EmployerHiringTracker /></ProtectedRoute>} />
           <Route path="/employer/hired-candidates" element={<ProtectedRoute allowedRoles={['employer']}><EmployerHiredCandidates /></ProtectedRoute>} />
           <Route path="/employer/talent-demands" element={<ProtectedRoute allowedRoles={['employer']}><EmployerTalentDemands /></ProtectedRoute>} />

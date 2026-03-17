@@ -17,15 +17,47 @@ router.get('/stats', async (req, res) => {
     try {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
 
-        const [pendingReviews, approvedToday, totalCandidates, rejectedToday] = await Promise.all([
+        const [
+            pendingReviews, 
+            approvedToday, 
+            totalCandidates, 
+            rejectedToday,
+            inactiveCandidates,
+            deactivatedCandidates
+        ] = await Promise.all([
             Document.count({ where: { status: 'pending' } }),
             Document.count({ where: { status: 'verified', verifiedAt: { [Op.gte]: today } } }),
             User.count({ where: { role: 'candidate' } }),
             Document.count({ where: { status: 'rejected' } }),
+            User.count({ 
+                where: { 
+                    role: 'candidate', 
+                    lastActiveAt: { [Op.between]: [thirtyDaysAgo, fifteenDaysAgo] },
+                    isDeactivated: false
+                } 
+            }),
+            User.count({ 
+                where: { 
+                    role: 'candidate', 
+                    [Op.or]: [
+                        { isDeactivated: true },
+                        { lastActiveAt: { [Op.lt]: thirtyDaysAgo } }
+                    ]
+                } 
+            }),
         ]);
 
-        res.json({ pendingReviews, approvedToday, totalCandidates, rejectedToday });
+        res.json({ 
+            pendingReviews, 
+            approvedToday, 
+            totalCandidates, 
+            rejectedToday, 
+            inactiveCandidates, 
+            deactivatedCandidates 
+        });
     } catch (err) {
         console.error('Staff stats error:', err);
         res.status(500).json({ error: 'Internal server error' });
@@ -43,6 +75,43 @@ router.get('/pending-companies', async (req, res) => {
         res.json({ companies: companies.map(c => c.toJSON()) });
     } catch (err) {
         console.error('Pending companies error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ── Inactive Candidates (for re-engagement) ───────────────────────────
+router.get('/inactive-candidates', async (req, res) => {
+    try {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+
+        const inactive = await User.findAll({
+            where: {
+                role: 'candidate',
+                lastActiveAt: { [Op.between]: [thirtyDaysAgo, fifteenDaysAgo] },
+                isDeactivated: false
+            },
+            attributes: { exclude: ['password'] },
+            include: [{ model: CandidateProfile, as: 'candidateProfile' }],
+            order: [['lastActiveAt', 'DESC']]
+        });
+
+        const deactivated = await User.findAll({
+            where: {
+                role: 'candidate',
+                [Op.or]: [
+                    { isDeactivated: true },
+                    { lastActiveAt: { [Op.lt]: thirtyDaysAgo } }
+                ]
+            },
+            attributes: { exclude: ['password'] },
+            include: [{ model: CandidateProfile, as: 'candidateProfile' }],
+            order: [['lastActiveAt', 'DESC']]
+        });
+
+        res.json({ inactive, deactivated });
+    } catch (err) {
+        console.error('Inactive candidates error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -239,8 +308,14 @@ router.get('/quote-requests', async (req, res) => {
     try {
         const requests = await QuoteRequest.findAll({
             include: [
-                { model: User, as: 'candidate', attributes: { exclude: ['password'] } },
+                { 
+                    model: User, 
+                    as: 'candidate', 
+                    attributes: { exclude: ['password'] },
+                    include: [{ model: CandidateProfile, as: 'candidateProfile' }]
+                },
                 { model: User, as: 'employer', attributes: { exclude: ['password'] } },
+                { model: User, as: 'altCandidate', attributes: { exclude: ['password'] } },
             ],
             order: [['createdAt', 'DESC']],
         });
@@ -262,9 +337,22 @@ router.put('/quote-requests/:id/resolve', async (req, res) => {
             status,
             costEstimate,
             resolvedAt: new Date(),
+            altCandidateId: req.body.altCandidateId || null,
+            unresponsiveAt: status === 'candidate_unresponsive' ? new Date() : null,
         };
 
-        if (status === 'approved') {
+        if (status === 'candidate_unresponsive') {
+            const candidate = await User.findByPk(request.candidateId);
+            if (candidate) {
+                await candidate.update({
+                    isDeactivated: true,
+                    isHiddenByUnresponsiveness: true,
+                    showReactivationPopup: false // Reset it for now, will set to true on login
+                });
+            }
+        }
+
+        if (status === 'approved' || (status === 'candidate_unresponsive' && updates.altCandidateId)) {
             updates.options = [
                 {
                     id: crypto.randomUUID(),
@@ -288,6 +376,9 @@ router.put('/quote-requests/:id/resolve', async (req, res) => {
                     ],
                 },
             ];
+            
+            // If it was unresponsive but we have an alt, we might want to let them review it.
+            // But let's keep status as candidate_unresponsive so the UI shows the "Recruited elsewhere" message.
         }
 
         await request.update(updates);
@@ -350,9 +441,51 @@ router.delete('/domains/:id', async (req, res) => {
 // ── User directory ─────────────────────────────────────────────────────
 router.get('/users', async (req, res) => {
     try {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const users = await User.findAll({ attributes: { exclude: ['password'] } });
-        res.json({ users });
+        const enriched = users.map(u => {
+            const plain = u.toJSON();
+            if (plain.role === 'candidate') {
+                const isInactive = plain.lastActiveAt && new Date(plain.lastActiveAt) < thirtyDaysAgo;
+                plain.profileVisible = !plain.isHiddenByUnresponsiveness && !plain.isDeactivated && !isInactive;
+                plain.hiddenReason = plain.isHiddenByUnresponsiveness
+                    ? 'Marked unresponsive'
+                    : plain.isDeactivated
+                    ? 'Deactivated'
+                    : isInactive
+                    ? 'Inactive 30+ days'
+                    : null;
+            }
+            return plain;
+        });
+        res.json({ users: enriched });
     } catch (err) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ── Toggle candidate profile visibility ────────────────────────────────
+router.put('/users/:id/visibility', async (req, res) => {
+    try {
+        const { visible } = req.body; // true = make visible, false = hide
+        const user = await User.findByPk(req.params.id);
+        if (!user || user.role !== 'candidate') return res.status(404).json({ error: 'Candidate not found' });
+
+        await user.update({
+            isHiddenByUnresponsiveness: !visible,
+            isDeactivated: !visible,
+        });
+
+        await AuditLog.create({
+            userId: req.user.id,
+            action: visible ? 'CANDIDATE_SHOWN' : 'CANDIDATE_HIDDEN',
+            details: `${req.user.email} manually ${visible ? 'showed' : 'hid'} candidate ${user.email}`,
+            ipAddress: req.ip,
+        });
+
+        res.json({ success: true, profileVisible: visible });
+    } catch (err) {
+        console.error('Toggle visibility error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -369,6 +502,50 @@ router.get('/users/:id', async (req, res) => {
         const documents = await Document.findAll({ where: { userId: req.params.id } });
         res.json({ user, documents });
     } catch (err) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ── Edit user profile (staff/admin) ────────────────────────────────────
+router.put('/users/:id/profile', async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const { firstName, lastName, email, phone, sector, yearsOfExperience, nationality, headline, location, bio, skills } = req.body;
+
+        // Update User record
+        const userUpdate = {};
+        if (firstName !== undefined) userUpdate.firstName = firstName;
+        if (lastName !== undefined) userUpdate.lastName = lastName;
+        if (email !== undefined) userUpdate.email = email;
+        if (phone !== undefined) userUpdate.phone = phone;
+        if (sector !== undefined) userUpdate.sector = sector;
+        if (yearsOfExperience !== undefined) userUpdate.yearsOfExperience = yearsOfExperience;
+        if (nationality !== undefined) userUpdate.nationality = nationality;
+        if (headline !== undefined) userUpdate.headline = headline;
+        if (location !== undefined) userUpdate.location = location;
+        if (Object.keys(userUpdate).length) await user.update(userUpdate);
+
+        // Update CandidateProfile if candidate
+        if (user.role === 'candidate') {
+            const [profile] = await CandidateProfile.findOrCreate({ where: { userId: user.id }, defaults: { userId: user.id } });
+            const profileUpdate = {};
+            if (bio !== undefined) profileUpdate.bio = bio;
+            if (skills !== undefined) profileUpdate.skills = Array.isArray(skills) ? skills : [];
+            if (Object.keys(profileUpdate).length) await profile.update(profileUpdate);
+        }
+
+        await AuditLog.create({
+            userId: req.user.id,
+            action: 'USER_PROFILE_EDITED',
+            details: `${req.user.email} edited profile of ${user.email}`,
+            ipAddress: req.ip,
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Edit profile error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

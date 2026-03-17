@@ -172,6 +172,8 @@ router.post('/login', async (req, res) => {
         verificationStatus: user.verificationStatus,
         verificationPaymentStatus: user.verificationPaymentStatus,
         isVerified: user.isVerified,
+        showReactivationPopup: user.showReactivationPopup,
+        isHiddenByUnresponsiveness: user.isHiddenByUnresponsiveness,
       },
     });
   } catch (error) {
@@ -190,6 +192,23 @@ router.get('/me', authenticate, async (req, res) => {
         { model: EmployerProfile, as: 'employerProfile', required: false },
       ],
     });
+    
+    if (user) {
+      console.log(`[ME] User ${user.email} - Hidden: ${user.isHiddenByUnresponsiveness}, Deactivated: ${user.isDeactivated}`);
+      if (user.isHiddenByUnresponsiveness) {
+        console.log(`[ME] Reactivating user ${user.email}...`);
+        await user.update({
+          isDeactivated: false,
+          isHiddenByUnresponsiveness: false,
+          showReactivationPopup: true,
+          lastActiveAt: new Date()
+        });
+        await user.reload();
+        console.log(`[ME] Reactivation complete for ${user.email}. Popup: ${user.showReactivationPopup}`);
+      } else {
+        await user.update({ lastActiveAt: new Date() });
+      }
+    }
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -215,6 +234,18 @@ router.get('/me', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Get me error detail:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+router.post('/acknowledge-reactivation', authenticate, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+    if (user) {
+      await user.update({ showReactivationPopup: false });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

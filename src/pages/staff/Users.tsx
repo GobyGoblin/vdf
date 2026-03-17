@@ -16,13 +16,16 @@ import {
     X,
     CheckCircle2,
     Eye,
+    EyeOff,
     FileText,
     Download,
-    ExternalLink
+    ExternalLink,
+    Clock
 } from 'lucide-react';
 import { staffAPI, getFileUrl, getCurrentUser } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
 
 interface UserData {
     id: string;
@@ -32,10 +35,17 @@ interface UserData {
     role: string;
     companyName?: string;
     isVerified: boolean;
+    verificationStatus?: string;
+    rejectionReason?: string;
     createdAt: string;
     bio?: string;
     location?: string;
     skills?: string[];
+    lastActiveAt?: string;
+    isHiddenByUnresponsiveness?: boolean;
+    isDeactivated?: boolean;
+    profileVisible?: boolean;
+    hiddenReason?: string;
 }
 
 const StaffUsers = () => {
@@ -107,6 +117,24 @@ const StaffUsers = () => {
         } catch (error: any) {
             const errorMsg = error.response?.data?.error || 'Failed to add user';
             toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
+        }
+    };
+
+    const handleToggleVisibility = async (e: React.MouseEvent, userId: string, makeVisible: boolean) => {
+        e.stopPropagation();
+        try {
+            await staffAPI.setProfileVisibility(userId, makeVisible);
+            setUsers(prev => prev.map(u =>
+                u.id === userId
+                    ? { ...u, profileVisible: makeVisible, isHiddenByUnresponsiveness: !makeVisible, hiddenReason: makeVisible ? undefined : 'Hidden by staff' }
+                    : u
+            ));
+            toast({
+                title: makeVisible ? 'Profile Visible' : 'Profile Hidden',
+                description: makeVisible ? 'Candidate is now visible in the talent pool.' : 'Candidate is now hidden from the talent pool.',
+            });
+        } catch (error: any) {
+            toast({ title: 'Error', description: error.response?.data?.error || 'Failed to update visibility', variant: 'destructive' });
         }
     };
 
@@ -225,6 +253,7 @@ const StaffUsers = () => {
                                         <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">User Profile</th>
                                         <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Access Level</th>
                                         <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Verification</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Profile Status</th>
                                         <th className="px-6 py-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Member Since</th>
                                         <th className="px-6 py-4 text-right text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Action</th>
                                     </tr>
@@ -252,9 +281,19 @@ const StaffUsers = () => {
                                                         <p className="font-display font-bold text-foreground leading-none mb-1">
                                                             {user.companyName || `${user.firstName} ${user.lastName}`}
                                                         </p>
-                                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                                            <Mail className="w-3 h-3" /> {user.email}
-                                                        </p>
+                                                        <div className="flex flex-col gap-1">
+                                                            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                                                <Mail className="w-2.5 h-2.5" /> {user.email}
+                                                            </p>
+                                                            {user.role === 'candidate' && user.lastActiveAt && (
+                                                                <p className={cn(
+                                                                    "text-[9px] font-bold uppercase tracking-widest flex items-center gap-1",
+                                                                    (Date.now() - new Date(user.lastActiveAt).getTime()) > 15 * 24 * 60 * 60 * 1000 ? "text-orange-500" : "text-muted-foreground"
+                                                                )}>
+                                                                    <Clock className="w-2.5 h-2.5" /> Last Active: {formatDistanceToNow(new Date(user.lastActiveAt), { addSuffix: true })}
+                                                                </p>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -265,13 +304,57 @@ const StaffUsers = () => {
                                                 {user.isVerified ? (
                                                     <div className="flex items-center gap-2 text-success">
                                                         <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                                                        <span className="text-xs font-bold uppercase tracking-wider">Trusted</span>
+                                                        <span className="text-xs font-bold uppercase tracking-wider">Verified</span>
+                                                    </div>
+                                                ) : user.verificationStatus === 'pending' ? (
+                                                    <div className="flex items-center gap-2 text-amber-500">
+                                                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                                                        <span className="text-xs font-bold uppercase tracking-wider">Pending</span>
+                                                    </div>
+                                                ) : user.verificationStatus === 'rejected' ? (
+                                                    <div className="flex items-center gap-2 text-destructive">
+                                                        <div className="w-2 h-2 rounded-full bg-destructive" />
+                                                        <span className="text-xs font-bold uppercase tracking-wider">Rejected</span>
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center gap-2 text-muted-foreground">
                                                         <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
                                                         <span className="text-xs font-bold uppercase tracking-wider">Unverified</span>
                                                     </div>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {user.role === 'candidate' && user.profileVisible !== undefined ? (
+                                                    <div className="flex flex-col gap-1.5">
+                                                        {user.profileVisible ? (
+                                                            <div className="flex items-center gap-2 text-emerald-600">
+                                                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                                                <span className="text-xs font-bold uppercase tracking-wider">Visible</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <div className="flex items-center gap-2 text-orange-500">
+                                                                    <EyeOff className="w-3.5 h-3.5" />
+                                                                    <span className="text-xs font-bold uppercase tracking-wider">Hidden</span>
+                                                                </div>
+                                                                {user.hiddenReason && (
+                                                                    <span className="text-[9px] text-orange-400 font-semibold">{user.hiddenReason}</span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        <button
+                                                            onClick={(e) => handleToggleVisibility(e, user.id, !user.profileVisible)}
+                                                            className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-lg border transition-all opacity-0 group-hover:opacity-100 ${
+                                                                user.profileVisible
+                                                                    ? 'border-orange-200 text-orange-500 hover:bg-orange-50'
+                                                                    : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                                                            }`}
+                                                        >
+                                                            {user.profileVisible ? 'Hide' : 'Show'}
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground/50">{user.role === 'candidate' ? '...' : '—'}</span>
                                                 )}
                                             </td>
                                             <td className="px-6 py-4 text-sm text-foreground/80 font-medium">

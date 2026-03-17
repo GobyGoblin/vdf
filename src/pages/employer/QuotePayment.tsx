@@ -94,7 +94,7 @@ const EmployerQuotePayment = () => {
 
             // Automatic redirect after showing success animation
             setTimeout(() => {
-                navigate(`/employer/quotes/${id}/receipt`);
+                navigate(`/employer/quotes`);
             }, 4000);
         } catch (error) {
             console.error('Failed to update status to paid:', error);
@@ -171,7 +171,7 @@ const EmployerQuotePayment = () => {
                         </motion.div>
                         <h2 className="text-4xl font-display font-bold text-foreground">Payment Successful!</h2>
                         <p className="text-muted-foreground text-lg">
-                            Thank you. Your order for <strong>{request.candidate?.fullName}</strong> has been confirmed.
+                            Thank you. Your order for <strong>{request.status === 'candidate_unresponsive' ? request.altCandidate?.fullName : request.candidate?.fullName}</strong> has been confirmed.
                         </p>
                         <div className="pt-6 border-t border-border mt-6">
                             <p className="text-xs uppercase tracking-widest font-bold text-muted-foreground mb-4">Redirecting to your receipt...</p>
@@ -325,7 +325,7 @@ const EmployerQuotePayment = () => {
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-foreground">{selectedOption.name} Package</h4>
-                                    <p className="text-muted-foreground text-sm mt-1">Placement for {request.candidate?.fullName}</p>
+                                    <p className="text-muted-foreground text-sm mt-1">Placement for {request.status === 'candidate_unresponsive' ? request.altCandidate?.fullName : request.candidate?.fullName}</p>
                                 </div>
                             </div>
 

@@ -87,6 +87,27 @@ const EmployerQuoteOptions = () => {
 
     if (!request) return null;
 
+    // Guard: if this quote is for an original unresponsive candidate with NO alt yet, block access
+    // (If there IS an alt candidate, the options page is valid — it's for the alt placement)
+    if (request.status === 'candidate_unresponsive' && !request.altCandidate && !request.altCandidateId) {
+        return (
+            <DashboardLayout role="employer">
+                <div className="max-w-xl mx-auto mt-20 text-center space-y-6">
+                    <div className="w-20 h-20 rounded-3xl bg-orange-100 flex items-center justify-center mx-auto">
+                        <Clock className="w-10 h-10 text-orange-500" />
+                    </div>
+                    <h2 className="text-2xl font-display font-bold text-slate-900">Candidate Not Available</h2>
+                    <p className="text-slate-500 leading-relaxed">
+                        This candidate is currently unavailable. Our team is working on finding a qualified alternative for your placement request.
+                    </p>
+                    <Link to="/employer/quotes" className="inline-flex items-center gap-2 px-6 py-3 bg-navy text-white rounded-xl font-bold text-sm hover:bg-gold hover:text-navy transition-all">
+                        <ArrowLeft className="w-4 h-4" /> Back to My Quotes
+                    </Link>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
     return (
         <DashboardLayout role="employer">
             <div className="max-w-[1200px] mx-auto space-y-10 pb-20">
@@ -95,111 +116,120 @@ const EmployerQuoteOptions = () => {
                     <ArrowLeft className="w-4 h-4" /> Back to Quotes
                 </Link>
 
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-4">
-                    <div className="space-y-6">
+                {/* Header Section - Modern Minimalist */}
+                <div className="space-y-8">
+                    <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-3">
-                            <span className="px-3 py-1.5 rounded-full bg-gold/10 text-gold text-[10px] font-black uppercase tracking-widest border border-gold/20 flex items-center gap-2">
-                                <Sparkles className="w-3.5 h-3.5" /> Exclusive Placement Offer
+                            <span className="px-3 py-1.5 rounded-xl bg-gold/10 text-gold text-[10px] font-black uppercase tracking-widest border border-gold/20 flex items-center gap-2">
+                                <Shield className="w-3.5 h-3.5" /> Direct Placement
                             </span>
-                            <span className="px-3 py-1.5 rounded-full bg-secondary text-muted-foreground text-[10px] font-black uppercase tracking-widest border border-border/50">
-                                Request ID: {request.id}
+                            <span className="px-3 py-1.5 rounded-xl bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border border-slate-100">
+                                Ref: {request.id}
                             </span>
                         </div>
-                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-foreground leading-[1.1]">
-                            Select Your <span className="text-gold relative inline-block">Offer Option
-                                <div className="absolute -bottom-2 left-0 w-full h-2 bg-gold/20 -z-10 -rotate-1" />
-                            </span>
+                        <h1 className="text-4xl md:text-5xl font-bold font-display text-slate-900 tracking-tight leading-[1.1]">
+                            {request.status === 'candidate_unresponsive' ? 'Review New ' : 'Select Your '}
+                            <span className="text-navy">Placement Option</span>
                         </h1>
-                        <p className="text-muted-foreground text-lg md:text-xl max-w-2xl leading-relaxed">
-                            Our experts have prepared premium placement tiers tailored for <span className="text-foreground font-bold border-b-2 border-gold/30">{request.candidate?.fullName}</span>. Compare the perks and costs to find the optimal fit for your organization.
+                        <p className="text-lg text-slate-500 max-w-2xl leading-relaxed font-medium">
+                            {request.status === 'candidate_unresponsive' ? (
+                                <>
+                                    The original candidate was <span className="text-orange-600 font-bold">recruited by another offer</span>. 
+                                    Our team has expedited this alternative placement for 
+                                    <span className="text-slate-900 font-bold ml-1">
+                                         {request.altCandidate?.fullName}
+                                     </span>.
+                                </>
+                            ) : (
+                                <>
+                                    Expertly curated placement tiers for 
+                                    <span className="text-slate-900 font-bold ml-1">
+                                        {request.candidate?.fullName}
+                                    </span>.
+                                </>
+                            )} Compare our optimized support tiers below.
                         </p>
                     </div>
-
                 </div>
 
-                {/* Options Grid */}
-                <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 mt-8">
+                {/* Options Grid - Refined Minimalist */}
+                <div className="grid lg:grid-cols-2 gap-8 items-stretch mt-4">
                     {request.options?.map((option, idx) => (
                         <motion.div
                             key={option.id}
                             initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.15, type: 'spring', bounce: 0.4 }}
+                            transition={{ delay: idx * 0.1 }}
                             className={cn(
-                                "relative flex flex-col p-8 md:p-10 rounded-[2.5rem] border-2 transition-all duration-500",
+                                "relative flex flex-col p-8 md:p-10 rounded-[2rem] border transition-all duration-300",
                                 option.selected
-                                    ? "bg-white border-gold shadow-2xl shadow-gold/20 scale-[1.02]"
-                                    : "bg-secondary/20 border-border opacity-90 hover:opacity-100 hover:border-gold/30 hover:bg-white hover:shadow-xl group"
+                                    ? "bg-white border-gold shadow-xl shadow-gold/5"
+                                    : "bg-white border-slate-100 hover:border-gold/30 hover:shadow-lg group"
                             )}
                         >
                             {option.selected && (
-                                <div className="absolute -top-4 -right-4 md:top-8 md:right-8 flex items-center gap-2 px-4 py-2 rounded-full bg-gold text-navy text-[10px] font-black uppercase tracking-widest shadow-lg z-10">
-                                    <CheckCircle2 className="w-3.5 h-3.5" /> Current Selection
+                                <div className="absolute top-6 right-6 flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 text-gold text-[9px] font-black uppercase tracking-widest border border-gold/20">
+                                    <CheckCircle2 className="w-3 h-3" /> Selected
                                 </div>
                             )}
 
-                            <div className="flex-1 space-y-8 flex flex-col">
-                                <div className="space-y-5">
+                            <div className="flex-1 flex flex-col gap-8">
+                                <div className="space-y-4">
                                     <div className={cn(
-                                        "w-16 h-16 rounded-[1.25rem] flex items-center justify-center border-2 transition-transform duration-500 group-hover:scale-110",
-                                        idx === 0 ? "bg-navy text-white" : "bg-gold text-navy border-none"
+                                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
+                                        idx === 0 ? "bg-slate-900 text-white" : "bg-gold text-navy"
                                     )}>
-                                        {idx === 0 ? <Shield className="w-8 h-8" /> : <Crown className="w-8 h-8" />}
+                                        {idx === 0 ? <Shield className="w-6 h-6" /> : <Crown className="w-6 h-6" />}
                                     </div>
                                     <div>
-                                        <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-2">{option.name}</h2>
-                                        <p className="text-muted-foreground text-xs uppercase tracking-widest font-black inline-block border-b-2 border-border pb-1">Placement Tier {idx + 1}</p>
+                                        <h2 className="text-2xl font-bold text-slate-900">{option.name}</h2>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Tier {idx + 1} Package</p>
                                     </div>
                                 </div>
 
-                                <div className="space-y-6">
-                                    <div className="bg-navy text-white p-8 rounded-[2rem] shadow-xl">
-                                        <p className="text-white/60 text-[10px] font-black uppercase tracking-widest mb-1">Total Estimated Yield</p>
-                                        <p className="text-3xl font-display font-bold text-gold">{option.costEstimate}</p>
+                                <div className="space-y-6 flex-1">
+                                    <div className="bg-slate-50 border border-slate-100 p-6 rounded-2xl">
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Estimated Base Yield</span>
+                                        <p className="text-2xl font-bold text-slate-900 tracking-tight">{option.costEstimate}</p>
                                     </div>
 
-                                    <div className="space-y-4">
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border/50 pb-2">Included Perks</h4>
-                                        <div className="grid grid-cols-1 gap-3">
+                                    <div className="space-y-3">
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Services Included</h4>
+                                        <div className="grid gap-2">
                                             {option.perks.map((perk, i) => (
-                                                <div key={i} className="flex items-center gap-3 text-sm text-foreground">
-                                                    <div className="w-5 h-5 rounded-full bg-success/10 text-success flex items-center justify-center shrink-0">
-                                                        <CheckCircle2 className="w-3 h-3" />
-                                                    </div>
+                                                <div key={i} className="flex items-start gap-2.5 text-xs text-slate-500 font-medium leading-tight">
+                                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
                                                     {perk}
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4">
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border/50 pb-2">Charge Breakdown</h4>
-                                        <div className="space-y-3">
+                                    <div className="space-y-3 pt-4 border-t border-slate-50">
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Calculation</h4>
+                                        <div className="space-y-2">
                                             {option.items.map((item, i) => (
-                                                <div key={i} className="flex justify-between items-center group">
-                                                    <div className="text-xs font-bold text-foreground">{item.label}</div>
-                                                    <div className="text-xs font-mono text-muted-foreground">€{item.amount.toLocaleString()}</div>
+                                                <div key={i} className="flex justify-between items-center bg-slate-50/50 px-3 py-2 rounded-lg">
+                                                    <span className="text-[11px] font-bold text-slate-600">{item.label}</span>
+                                                    <span className="text-[11px] font-mono font-medium text-slate-400">€{item.amount.toLocaleString()}</span>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="mt-8 flex-1 flex flex-col justify-end">
-                                    <button
-                                        disabled={selecting}
-                                        onClick={() => option.selected ? navigate(`/employer/quotes/${id}/payment`) : handleSelectOption(option.id)}
-                                        className={cn(
-                                            "w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all block text-center",
-                                            option.selected
-                                                ? "bg-success text-white hover:shadow-2xl hover:shadow-success/40 hover:-translate-y-1"
-                                                : "bg-navy text-white hover:bg-gold hover:text-navy hover:shadow-2xl hover:shadow-gold/30 hover:-translate-y-1"
-                                        )}
-                                    >
-                                        {option.selected ? "Proceed to Checkout" : `Select ${option.name}`}
-                                    </button>
-                                </div>
+                                <button
+                                    disabled={selecting}
+                                    onClick={() => option.selected ? navigate(`/employer/quotes/${id}/payment`) : handleSelectOption(option.id)}
+                                    className={cn(
+                                        "w-full py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all",
+                                        option.selected
+                                            ? "bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20"
+                                            : "bg-navy text-white hover:bg-gold hover:text-navy hover:shadow-lg"
+                                    )}
+                                >
+                                    {option.selected ? "Continue to Payment" : `Select ${option.name}`}
+                                </button>
                             </div>
                         </motion.div>
                     ))}
@@ -227,8 +257,10 @@ const EmployerQuoteOptions = () => {
                                         <Calendar className="w-10 h-10" />
                                     </div>
                                     <div className="text-center space-y-2">
-                                        <h2 className="text-3xl font-display font-bold text-foreground">Plan Interview Meeting</h2>
-                                        <p className="text-muted-foreground">Schedule a direct session with {request.candidate?.fullName}.</p>
+                                        <h2 className="text-3xl font-display font-bold text-slate-900">Plan Interview</h2>
+                                        <p className="text-sm text-slate-500 font-medium">
+                                            Schedule a session with {request.status === 'candidate_unresponsive' ? request.altCandidate?.fullName : request.candidate?.fullName}.
+                                        </p>
                                     </div>
 
                                     <div className="space-y-4">
@@ -279,31 +311,21 @@ const EmployerQuoteOptions = () => {
                     )}
                 </AnimatePresence>
 
-                {/* Quote Context / Bottom Actions */}
-                <div className="p-12 rounded-[3.5rem] bg-navy text-white overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-12 opacity-10 rotate-12">
-                        <Shield size={200} />
+                {/* Quote Context - Minimalist Footer */}
+                <div className="p-8 md:p-12 rounded-[2rem] bg-slate-50 border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-12">
+                    <div className="max-w-2xl space-y-4">
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            <Shield className="w-4 h-4 text-navy" /> Our Commitment
+                        </div>
+                        <h3 className="text-2xl font-bold text-slate-900 font-display">Transparency & Protection</h3>
+                        <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                            Every placement secured through our platform includes full compliance handling, visa support, and a 6-month satisfaction guarantee. We ensure a seamless integration process for both employer and candidate.
+                        </p>
                     </div>
-                    <div className="relative z-10 grid md:grid-cols-2 gap-12 items-center">
-                        <div className="space-y-6">
-                            <h3 className="text-3xl font-display font-bold">The German Talent <span className="text-gold">Commitment</span></h3>
-                            <p className="text-white/60 leading-relaxed">
-                                Every placement secured through our platform includes full compliance handling, visa support, and a 6-month satisfaction guarantee. If the candidate doesn't integrate successfully, we will source a replacement at no additional cost.
-                            </p>
-                            {selectedOption && (
-                                <Link
-                                    to={`/employer/quotes/${request.id}/receipt`}
-                                    className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-gold hover:underline"
-                                >
-                                    View Final Breakdown Receipt <ArrowRight className="w-4 h-4" />
-                                </Link>
-                            )}
-                        </div>
-                        <div className="flex justify-end">
-                            <Link to="/employer/candidates" className="px-10 py-5 rounded-2xl bg-white/10 border border-white/20 text-white font-black uppercase tracking-widest text-xs hover:bg-white/20 transition-all">
-                                Manage All Candidates
-                            </Link>
-                        </div>
+                    <div className="shrink-0">
+                        <Link to="/employer/candidates" className="px-8 py-4 rounded-xl border border-slate-200 text-slate-600 font-bold uppercase tracking-widest text-[10px] hover:bg-slate-100 transition-all flex items-center gap-2">
+                            Manage Pipeline
+                        </Link>
                     </div>
                 </div>
             </div>

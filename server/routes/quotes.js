@@ -1,6 +1,6 @@
 import express from 'express';
 import crypto from 'crypto';
-import { User, QuoteRequest, AuditLog } from '../models/index.js';
+import { User, QuoteRequest, AuditLog, EmployerCandidateRel } from '../models/index.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { Op } from 'sequelize';
 import { anonymizeCandidate } from '../utils/anonymize.js';
@@ -115,12 +115,18 @@ router.get('/my', authorize('employer'), async (req, res) => {
     try {
         const requests = await QuoteRequest.findAll({
             where: { employerId: req.user.id },
-            include: [{ model: User, as: 'candidate', attributes: { exclude: ['password'] } }],
+            include: [
+                { model: User, as: 'candidate', attributes: { exclude: ['password'] } },
+                { model: User, as: 'altCandidate', attributes: { exclude: ['password'] } }
+            ],
             order: [['createdAt', 'DESC']],
         });
         const enriched = requests.map(r => {
             const plain = r.toJSON();
             plain.candidate = anonymizeCandidate(plain.candidate, req.user.role);
+            if (plain.altCandidate) {
+                plain.altCandidate = anonymizeCandidate(plain.altCandidate, req.user.role);
+            }
             return plain;
         });
         res.json({ requests: enriched });
@@ -137,6 +143,7 @@ router.get('/:id', async (req, res) => {
             include: [
                 { model: User, as: 'candidate', attributes: { exclude: ['password'] } },
                 { model: User, as: 'employer', attributes: { exclude: ['password'] } },
+                { model: User, as: 'altCandidate', attributes: { exclude: ['password'] } },
             ],
         });
         if (!request) return res.status(404).json({ error: 'Quote not found' });
@@ -148,6 +155,9 @@ router.get('/:id', async (req, res) => {
 
         const plain = request.toJSON();
         plain.candidate = anonymizeCandidate(plain.candidate, req.user.role);
+        if (plain.altCandidate) {
+            plain.altCandidate = anonymizeCandidate(plain.altCandidate, req.user.role);
+        }
         res.json({ request: plain });
     } catch (err) {
         console.error('Get quote error:', err);
@@ -170,7 +180,11 @@ router.put('/:id/select-option', authorize('employer'), async (req, res) => {
             selected: opt.id === optionId,
         }));
 
-        await request.update({ options: updatedOptions, selectedOptionId: optionId });
+        await request.update({ 
+            options: updatedOptions, 
+            selectedOptionId: optionId,
+            status: request.status === 'candidate_unresponsive' ? 'candidate_unresponsive' : 'approved'
+        });
 
         await AuditLog.create({
             userId: req.user.id,
@@ -182,6 +196,41 @@ router.put('/:id/select-option', authorize('employer'), async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         console.error('Select option error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ── Cancel quote (employer) ───────────────────────────────────────────
+router.put('/:id/cancel', authorize('employer'), async (req, res) => {
+    try {
+        const request = await QuoteRequest.findOne({
+            where: { id: req.params.id, employerId: req.user.id }
+        });
+
+        if (!request) return res.status(404).json({ error: 'Quote not found' });
+        
+        // Remove the quote completely so they can request it again if they change their mind
+        await request.destroy(); 
+
+        // Revert candidate relation status back to 'saved' so they show up normally again
+        const rel = await EmployerCandidateRel.findOne({
+            where: { candidateId: request.candidateId, employerId: req.user.id }
+        });
+        
+        if (rel) {
+             await rel.update({ status: 'saved' });
+        }
+
+        await AuditLog.create({
+            userId: req.user.id,
+            action: 'QUOTE_CANCELLED',
+            details: `Employer cancelled quote ${req.params.id}`,
+            ipAddress: req.ip,
+        });
+
+        res.json({ success: true, message: 'Quote cancelled successfully' });
+    } catch (err) {
+        console.error('Cancel quote error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

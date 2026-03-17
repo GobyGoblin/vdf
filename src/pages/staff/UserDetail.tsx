@@ -21,16 +21,23 @@ import {
     ExternalLink,
     Eye,
     FileText,
-    Download
+    Download,
+    Pencil,
+    Save,
+    ChevronDown
 } from 'lucide-react';
 import { staffAPI, getFileUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 const StaffUserDetail = () => {
     const { userId } = useParams<{ userId: string }>();
     const navigate = useNavigate();
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [editOpen, setEditOpen] = useState(false);
+    const [editSaving, setEditSaving] = useState(false);
+    const [editForm, setEditForm] = useState<any>({});
 
     useEffect(() => {
         if (userId) {
@@ -43,6 +50,21 @@ const StaffUserDetail = () => {
             setLoading(true);
             const result = await staffAPI.getUserById(id);
             setData(result);
+            // Pre-fill edit form with current user data
+            const u = result.user;
+            setEditForm({
+                firstName: u.firstName || '',
+                lastName: u.lastName || '',
+                email: u.email || '',
+                phone: u.phone || '',
+                sector: u.sector || '',
+                yearsOfExperience: u.yearsOfExperience || '',
+                nationality: u.nationality || '',
+                bio: u.bio || '',
+                headline: u.headline || '',
+                location: u.location || '',
+                skills: (u.skills || []).join(', '),
+            });
         } catch (error) {
             console.error('Failed to load user:', error);
         } finally {
@@ -132,6 +154,25 @@ const StaffUserDetail = () => {
         }
     };
 
+    const handleSaveProfile = async () => {
+        if (!data?.user?.id) return;
+        setEditSaving(true);
+        try {
+            const payload = {
+                ...editForm,
+                skills: editForm.skills.split(',').map((s: string) => s.trim()).filter(Boolean),
+            };
+            await staffAPI.updateUserProfile(data.user.id, payload);
+            setData((prev: any) => ({ ...prev, user: { ...prev.user, ...payload } }));
+            setEditOpen(false);
+            toast({ title: 'Profile Updated', description: 'Changes saved successfully.' });
+        } catch (err: any) {
+            toast({ title: 'Error', description: err.response?.data?.error || 'Failed to save changes.', variant: 'destructive' });
+        } finally {
+            setEditSaving(false);
+        }
+    };
+
     if (loading) {
         return (
             <DashboardLayout role={window.location.pathname.startsWith('/admin') ? 'admin' : 'staff'}>
@@ -191,15 +232,22 @@ const StaffUserDetail = () => {
                                         <h1 className="text-3xl font-display font-bold text-foreground">
                                             {isEmployer ? user.companyName : `${user.firstName} ${user.lastName}`}
                                         </h1>
-                                        <span className={cn(
-                                            "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border",
-                                            user.role === 'admin' ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                                                user.role === 'staff' ? "bg-purple-500/10 text-purple-500 border-purple-500/20" :
-                                                    user.role === 'employer' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
-                                                        "bg-green-500/10 text-green-500 border-green-500/20"
-                                        )}>
-                                            {user.role}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={cn(
+                                                "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border",
+                                                user.role === 'admin' ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                                                    user.role === 'staff' ? "bg-purple-500/10 text-purple-500 border-purple-500/20" :
+                                                        user.role === 'employer' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
+                                                            "bg-green-500/10 text-green-500 border-green-500/20"
+                                            )}>
+                                                {user.role}
+                                            </span>
+                                            {user.isHiddenByUnresponsiveness && (
+                                                <span className="px-3 py-1 rounded-full bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest border border-transparent shadow-[0_0_10px_rgba(249,115,22,0.3)]">
+                                                    NOT AVAILABLE
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     <p className="text-muted-foreground flex items-center gap-2">
                                         <Mail className="w-4 h-4" /> {user.email}
@@ -212,11 +260,17 @@ const StaffUserDetail = () => {
                                     </div>
                                     <div className={cn(
                                         "flex items-center gap-2 px-3 py-1.5 rounded-xl border",
-                                        user.isVerified ? "bg-success/5 border-success/20 text-success" : "bg-warning/5 border-warning/20 text-warning"
+                                        user.isVerified
+                                            ? "bg-success/5 border-success/20 text-success"
+                                            : user.verificationStatus === 'pending'
+                                                ? "bg-amber-500/10 border-amber-500/20 text-amber-600"
+                                                : user.verificationStatus === 'rejected'
+                                                    ? "bg-destructive/5 border-destructive/20 text-destructive"
+                                                    : "bg-secondary border-border text-muted-foreground"
                                     )}>
                                         {user.isVerified ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                                         <span className="text-xs font-bold uppercase tracking-wider">
-                                            {user.verificationStatus || 'Unknown'}
+                                            {user.isVerified ? 'Verified' : user.verificationStatus === 'pending' ? 'Pending' : user.verificationStatus === 'rejected' ? 'Rejected' : 'Unverified'}
                                         </span>
                                     </div>
                                 </div>
@@ -453,17 +507,38 @@ const StaffUserDetail = () => {
                                 <Shield className="w-4 h-4 text-gold" /> Profile Verification
                             </h3>
                             <div className="space-y-4">
-                                <div className="p-4 rounded-xl bg-background/50 border border-border">
-                                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-1">Status</p>
-                                    <div className="flex items-center gap-2">
-                                        <div className={cn(
-                                            "w-2.5 h-2.5 rounded-full",
-                                            user.isVerified ? "bg-success" : "bg-warning"
-                                        )} />
-                                        <span className="font-bold text-foreground tracking-tight">
-                                            {user.verificationStatus?.toUpperCase() || 'UNVERIFIED'}
-                                        </span>
-                                    </div>
+                                <div className="p-4 rounded-xl bg-background/50 border border-border space-y-3">
+                                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Verification Status</p>
+                                    {/* 4-state badge */}
+                                    {user.isVerified ? (
+                                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 border border-success/20">
+                                            <div className="w-2 h-2 rounded-full bg-success animate-pulse shrink-0" />
+                                            <span className="text-sm font-black text-success uppercase tracking-widest">Verified</span>
+                                        </div>
+                                    ) : user.verificationStatus === 'pending' ? (
+                                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                                            <span className="text-sm font-black text-amber-600 uppercase tracking-widest">Pending Review</span>
+                                        </div>
+                                    ) : user.verificationStatus === 'rejected' ? (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20">
+                                                <div className="w-2 h-2 rounded-full bg-destructive shrink-0" />
+                                                <span className="text-sm font-black text-destructive uppercase tracking-widest">Rejected</span>
+                                            </div>
+                                            {user.rejectionReason && (
+                                                <div className="px-3 py-2.5 rounded-lg bg-destructive/5 border border-destructive/15">
+                                                    <p className="text-[10px] text-destructive font-black uppercase tracking-widest mb-1">Rejection Reason</p>
+                                                    <p className="text-xs text-foreground/80 leading-relaxed">{user.rejectionReason}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary border border-border">
+                                            <div className="w-2 h-2 rounded-full bg-muted-foreground/30 shrink-0" />
+                                            <span className="text-sm font-black text-muted-foreground uppercase tracking-widest">Unverified</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {isCandidate && !user.isVerified && (
@@ -504,7 +579,7 @@ const StaffUserDetail = () => {
                                     </button>
                                 ) : null}
 
-                                {user.rejectionReason && (
+                                {user.rejectionReason && user.verificationStatus !== 'rejected' && (
                                     <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/20">
                                         <p className="text-[10px] text-destructive uppercase font-bold tracking-widest mb-1 flex items-center gap-1">
                                             <XCircle className="w-3 h-3" /> Rejection History
@@ -540,6 +615,96 @@ const StaffUserDetail = () => {
                                     <p className="text-sm text-muted-foreground">{user.city || user.location || ''}</p>
                                 </div>
                             </div>
+                        </motion.div>
+                        {/* Edit Profile Card */}
+                        <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="card-premium overflow-hidden"
+                        >
+                            <button
+                                onClick={() => setEditOpen(o => !o)}
+                                className="w-full flex items-center justify-between p-6 hover:bg-secondary/20 transition-colors"
+                            >
+                                <h3 className="font-bold text-foreground flex items-center gap-2">
+                                    <Pencil className="w-4 h-4 text-gold" /> Edit Profile
+                                </h3>
+                                <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", editOpen && "rotate-180")} />
+                            </button>
+
+                            {editOpen && (
+                                <div className="px-6 pb-6 space-y-4 border-t border-border pt-4">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">First Name</label>
+                                            <input value={editForm.firstName} onChange={e => setEditForm({...editForm, firstName: e.target.value})}
+                                                className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border outline-none focus:border-gold text-sm font-semibold" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Last Name</label>
+                                            <input value={editForm.lastName} onChange={e => setEditForm({...editForm, lastName: e.target.value})}
+                                                className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border outline-none focus:border-gold text-sm font-semibold" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Email</label>
+                                        <input type="email" value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})}
+                                            className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border outline-none focus:border-gold text-sm font-semibold" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Phone</label>
+                                        <input type="tel" value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})}
+                                            placeholder="+49 170 1234567"
+                                            className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border outline-none focus:border-gold text-sm font-semibold" />
+                                    </div>
+                                    {data.user.role === 'candidate' && (<>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Headline</label>
+                                            <input value={editForm.headline} onChange={e => setEditForm({...editForm, headline: e.target.value})}
+                                                placeholder="e.g. Senior SAP Consultant"
+                                                className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border outline-none focus:border-gold text-sm font-semibold" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sector</label>
+                                            <input value={editForm.sector} onChange={e => setEditForm({...editForm, sector: e.target.value})}
+                                                className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border outline-none focus:border-gold text-sm font-semibold" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Experience</label>
+                                                <input value={editForm.yearsOfExperience} onChange={e => setEditForm({...editForm, yearsOfExperience: e.target.value})}
+                                                    placeholder="e.g. 8+ Years"
+                                                    className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border outline-none focus:border-gold text-sm font-semibold" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nationality</label>
+                                                <input value={editForm.nationality} onChange={e => setEditForm({...editForm, nationality: e.target.value})}
+                                                    className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border outline-none focus:border-gold text-sm font-semibold" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Skills (comma separated)</label>
+                                            <input value={editForm.skills} onChange={e => setEditForm({...editForm, skills: e.target.value})}
+                                                placeholder="Python, Docker, SAP..."
+                                                className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border outline-none focus:border-gold text-sm font-semibold" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Bio</label>
+                                            <textarea rows={3} value={editForm.bio} onChange={e => setEditForm({...editForm, bio: e.target.value})}
+                                                className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border outline-none focus:border-gold text-sm font-semibold resize-none" />
+                                        </div>
+                                    </>)}
+                                    <button
+                                        onClick={handleSaveProfile}
+                                        disabled={editSaving}
+                                        className="w-full py-3 rounded-xl bg-gold text-navy font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-gold/20 transition-all disabled:opacity-50"
+                                    >
+                                        {editSaving ? <span className="animate-spin border-2 border-navy border-t-transparent rounded-full w-4 h-4" /> : <Save className="w-4 h-4" />}
+                                        {editSaving ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                </div>
+                            )}
                         </motion.div>
                     </div>
                 </div>

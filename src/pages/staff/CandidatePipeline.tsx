@@ -245,11 +245,28 @@ const StaffCandidatePipeline = () => {
                                                         <div>
                                                             <div className="flex items-center gap-2">
                                                                 <span className="font-bold text-foreground text-sm group-hover:text-gold transition-colors">{rel.candidate?.fullName}</span>
+                                                                {rel.candidate?.isHiddenByUnresponsiveness && (
+                                                                    <span className="px-1.5 py-0.5 rounded-md bg-orange-500 text-white text-[8px] font-black uppercase tracking-widest">NOT AVAILABLE</span>
+                                                                )}
                                                                 <Link to={`${window.location.pathname.startsWith('/admin') ? '/admin' : '/staff'}/users/${rel.candidateId}`} className="p-1 rounded hover:bg-white text-muted-foreground/40 hover:text-gold transition-all">
                                                                     <ExternalLink className="w-3 h-3" />
                                                                 </Link>
                                                             </div>
                                                             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">{rel.candidate?.sector || 'EXPERT'}</p>
+                                                            {(() => {
+                                                                const lastActive = rel.candidate?.lastActiveAt ? new Date(rel.candidate.lastActiveAt) : null;
+                                                                const isInactiveNow = lastActive && (Date.now() - lastActive.getTime()) > 15 * 24 * 60 * 60 * 1000;
+                                                                
+                                                                if (isInactiveNow) {
+                                                                    return (
+                                                                        <div className="flex items-center gap-1 mt-1 text-[9px] font-black text-orange-500 uppercase tracking-tighter animate-pulse">
+                                                                            <Clock className="w-2.5 h-2.5" />
+                                                                            <span>Inactive {formatDistanceToNow(lastActive, { addSuffix: true })}</span>
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                return null;
+                                                            })()}
                                                         </div>
                                                     </div>
                                                 </td>

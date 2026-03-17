@@ -18,6 +18,7 @@ import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 const EmployerQuotes = () => {
     const [requests, setRequests] = useState<any[]>([]);
@@ -59,9 +60,30 @@ const EmployerQuotes = () => {
         }
     };
 
-    const filteredRequests = requests.filter(req =>
-        filter === 'all' ? true : req.status === filter
-    );
+    const filteredRequests = requests.filter(req => {
+        if (filter === 'all') return true;
+        if (filter === 'pending') return ['pending', 'awaiting_candidate'].includes(req.status);
+        return req.status === filter;
+    });
+
+    const handleCancelRequest = async (id: string) => {
+        if (!confirm('Are you sure you want to cancel this quote request?')) return;
+        try {
+            const { quotesAPI } = await import('@/lib/api');
+            await quotesAPI.cancel(id);
+            toast({
+                title: 'Request Cancelled',
+                description: 'Your quote request has been cancelled.',
+            });
+            loadRequests();
+        } catch (error: any) {
+            toast({
+                title: 'Error',
+                description: error.response?.data?.error || error.message || 'Failed to cancel request',
+                variant: 'destructive',
+            });
+        }
+    };
 
     return (
         <DashboardLayout role="employer">
@@ -96,135 +118,194 @@ const EmployerQuotes = () => {
                             <p className="text-muted-foreground">Track your "Cost of Offer" requests and estimates</p>
                         </div>
 
-                        {/* Stats */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="card-premium p-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 rounded-xl bg-primary/10 text-primary">
-                                        <Clock className="w-6 h-6" />
+                        {/* Stats Summary */}
+                        <div className="flex flex-wrap gap-4">
+                            {[
+                                { label: 'Pending Requests', count: requests.filter(r => ['pending', 'awaiting_candidate'].includes(r.status)).length, color: 'text-amber-600', bg: 'bg-amber-50' },
+                                { label: 'Approved Offers', count: requests.filter(r => r.status === 'approved').length, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                                { label: 'Rejected', count: requests.filter(r => r.status === 'rejected').length, color: 'text-rose-600', bg: 'bg-rose-50' },
+                                { label: 'Not Available', count: requests.filter(r => r.status === 'candidate_unresponsive').length, color: 'text-orange-600', bg: 'bg-orange-50' }
+                            ].map((stat, i) => (
+                                <div key={i} className={cn("px-6 py-4 rounded-2xl border border-border/50 bg-white flex items-center gap-4 min-w-[200px] shadow-sm")}>
+                                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg", stat.bg, stat.color)}>
+                                        {stat.count}
                                     </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Pending</p>
-                                        <p className="text-2xl font-bold">{requests.filter(r => ['pending', 'awaiting_candidate'].includes(r.status)).length}</p>
-                                    </div>
+                                    <span className="text-sm font-medium text-slate-500">{stat.label}</span>
                                 </div>
-                            </div>
-                            <div className="card-premium p-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 rounded-xl bg-success/10 text-success">
-                                        <CheckCircle2 className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Approved</p>
-                                        <p className="text-2xl font-bold">{requests.filter(r => r.status === 'approved').length}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="card-premium p-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 rounded-xl bg-destructive/10 text-destructive">
-                                        <XCircle className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Rejected</p>
-                                        <p className="text-2xl font-bold">{requests.filter(r => ['rejected', 'candidate_unresponsive'].includes(r.status)).length}</p>
-                                    </div>
-                                </div>
-                            </div>
+                            ))}
                         </div>
 
-                        {/* List */}
-                        <div className="card-premium overflow-hidden">
-                            <div className="p-4 border-b border-border bg-secondary/30 flex items-center justify-between">
+                        {/* List - Minimalist approach */}
+                        <div className="space-y-4">
+                            {/* Filter Bar */}
+                            <div className="flex items-center justify-between pb-2">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest px-2">Recent Requests</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium">Filter by Status:</span>
+                                    <span className="text-xs font-medium text-slate-500">Filter:</span>
                                     <select
                                         value={filter}
                                         onChange={(e) => setFilter(e.target.value as any)}
-                                        className="bg-background border border-border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                        className="bg-white border border-border rounded-lg px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-gold/30 hover:bg-slate-50 transition-colors"
                                     >
-                                        <option value="all">All Requests</option>
+                                        <option value="all">All</option>
                                         <option value="pending">Pending</option>
-                                        <option value="awaiting_candidate">Awaiting Candidate</option>
                                         <option value="approved">Approved</option>
                                         <option value="rejected">Rejected</option>
-                                        <option value="candidate_unresponsive">Candidate Unresponsive</option>
+                                        <option value="candidate_unresponsive">Not Available</option>
                                     </select>
                                 </div>
                             </div>
 
-                            <div className="divide-y divide-border">
+                            <div className="space-y-6">
                                 {loading ? (
                                     [1, 2, 3].map(i => (
-                                        <div key={i} className="p-6 animate-pulse space-y-4">
-                                            <div className="h-6 bg-secondary/50 rounded w-1/4" />
-                                            <div className="h-4 bg-secondary/50 rounded w-1/2" />
+                                        <div key={i} className="bg-white border border-border/50 rounded-2xl p-8 animate-pulse flex justify-between">
+                                            <div className="space-y-3 w-1/3">
+                                                <div className="h-6 bg-slate-100 rounded w-full" />
+                                                <div className="h-4 bg-slate-100 rounded w-2/3" />
+                                            </div>
+                                            <div className="h-10 bg-slate-100 rounded w-32" />
                                         </div>
                                     ))
                                 ) : filteredRequests.length === 0 ? (
-                                    <div className="p-12 text-center">
-                                        <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                                        <p className="text-muted-foreground font-medium">No quote requests found</p>
-                                        <Link to="/employer/talent-pool" className="text-gold hover:underline text-sm mt-2 inline-block">
-                                            Browse talent pool to request quotes
+                                    <div className="bg-white border border-border/50 rounded-2xl p-20 text-center">
+                                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                            <FileText className="w-8 h-8 text-slate-200" />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-slate-900 mb-2">No Requests Found</h3>
+                                        <p className="text-slate-500 mb-8">You haven't requested any quotes yet or no requests match the current filter.</p>
+                                        <Link to="/employer/talent-pool" className="px-6 py-3 bg-navy text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-navy/90 transition-colors inline-block">
+                                            Request Your First Quote
                                         </Link>
                                     </div>
                                 ) : (
                                     filteredRequests.map((req) => (
-                                        <div key={req.id} className="p-6 hover:bg-secondary/5 transition-colors group border-b border-border/50 last:border-0">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex gap-4">
-                                                    <div className={cn(
-                                                        "p-3 rounded-xl shrink-0 h-fit",
-                                                        ['pending', 'awaiting_candidate'].includes(req.status) ? "bg-warning/10 text-warning" :
-                                                            req.status === 'approved' ? "bg-success/10 text-success" :
-                                                                "bg-destructive/10 text-destructive"
-                                                    )}>
-                                                        <FileText className="w-6 h-6" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-3 mb-1">
-                                                            <h3 className="font-bold text-foreground text-lg">
-                                                                {req.candidate?.firstName} {req.candidate?.lastName}
-                                                            </h3>
-                                                            <span className={cn(
-                                                                "text-[9px] px-2.5 py-1 rounded-full font-black uppercase tracking-widest border h-fit",
-                                                                ['pending', 'awaiting_candidate'].includes(req.status) ? "bg-warning/10 text-warning border-warning/20 shadow-[0_0_10px_rgba(234,179,8,0.1)]" :
-                                                                    req.status === 'approved' ? "bg-success/10 text-success border-success/20 shadow-[0_0_10px_rgba(34,197,94,0.1)]" :
-                                                                        "bg-destructive/10 text-destructive border-destructive/20"
-                                                            )}>
-                                                                {req.status.replace('_', ' ')}
-                                                            </span>
+                                        <div key={req.id} className="bg-white border border-border/50 rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow">
+                                            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8">
+                                                <div className="flex-1 space-y-6">
+                                                    <div className="flex items-start gap-4">
+                                                        <div className={cn(
+                                                            "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border transition-all",
+                                                            req.status === 'candidate_unresponsive' || (req.altCandidate && req.status !== 'rejected') ? "bg-orange-50 border-orange-100 text-orange-500" :
+                                                            ['pending', 'awaiting_candidate'].includes(req.status) ? "bg-blue-50 border-blue-100 text-blue-500" :
+                                                            req.status === 'approved' || req.status === 'paid' ? "bg-emerald-50 border-emerald-100 text-emerald-500" :
+                                                            "bg-slate-50 border-slate-100 text-slate-400"
+                                                        )}>
+                                                            <User className="w-6 h-6" />
                                                         </div>
-                                                        <div className="flex flex-wrap gap-x-6 gap-y-2 mt-2 text-sm text-muted-foreground font-medium">
-                                                            <div className="flex items-center gap-2">
-                                                                <Calendar className="w-4 h-4 text-gold/60" />
-                                                                Requested: {formatDistanceToNow(new Date(req.requestedAt), { addSuffix: true })}
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-3">
+                                                                <h3 className="text-xl font-bold font-display text-slate-900 leading-none">
+                                                                    {req.candidate?.fullName}
+                                                                </h3>
+                                                                <span className={cn(
+                                                                    "text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-widest border",
+                                                                    req.status === 'candidate_unresponsive' || (req.altCandidate && req.status !== 'paid') ? "bg-orange-500 text-white border-transparent shadow-[0_0_10px_rgba(249,115,22,0.2)]" :
+                                                                    ['pending', 'awaiting_candidate'].includes(req.status) ? "bg-blue-50 text-blue-600 border-blue-200" :
+                                                                    (req.status === 'approved' || req.status === 'paid') && !req.altCandidate ? "bg-emerald-500 text-white border-transparent shadow-[0_0_10px_rgba(16,185,129,0.2)]" :
+                                                                    req.status === 'paid' ? "bg-emerald-500 text-white border-transparent shadow-[0_0_10px_rgba(16,185,129,0.2)]" :
+                                                                    "bg-slate-50 text-slate-500 border-slate-200"
+                                                                )}>
+                                                                    {req.status === 'candidate_unresponsive' || (req.altCandidate && req.status !== 'paid') ? "NOT AVAILABLE" :
+                                                                     ['pending', 'awaiting_candidate'].includes(req.status) ? "PENDING" : 
+                                                                     req.status === 'approved' ? "APPROVED" : 
+                                                                     req.status === 'paid' ? "PAID" :
+                                                                     req.status.toUpperCase().replace('_', ' ')}
+                                                                </span>
                                                             </div>
-                                                            {req.status === 'approved' && req.costEstimate && (
-                                                                <div className="flex items-center gap-2 text-success font-black tracking-tight">
-                                                                    <DollarSign className="w-4 h-4" />
-                                                                    Total: {req.costEstimate}
-                                                                </div>
-                                                            )}
+                                                            <div className="flex items-center gap-3 text-xs text-slate-400 font-medium tracking-tight">
+                                                                <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> requested {formatDistanceToNow(new Date(req.requestedAt), { addSuffix: true })}</span>
+                                                                <span className="w-1 h-1 rounded-full bg-slate-200" />
+                                                                <span>ID: {req.id}</span>
+                                                                {req.status === 'approved' && !req.altCandidate && req.costEstimate && (
+                                                                    <>
+                                                                        <span className="w-1 h-1 rounded-full bg-slate-200" />
+                                                                        <span className="text-emerald-600 font-bold">Estimated: {req.costEstimate}</span>
+                                                                    </>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
+
+                                                    {/* Recommendation Box - minimalist layout */}
+                                                    {req.altCandidate && (
+                                                        <motion.div 
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            className="p-6 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col md:flex-row items-center gap-8"
+                                                        >
+                                                            <div className="flex-1 space-y-2 text-center md:text-left">
+                                                                <div className="flex items-center justify-center md:justify-start gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                                    <Shield className="w-3.5 h-3.5 text-orange-500" /> Expert Recommendation
+                                                                </div>
+                                                                <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                                                                    The originally requested expert was <span className="text-orange-600 font-bold">recruited by another offer</span>. 
+                                                                    We've hand-picked a highly qualified alternative with similar credentials and a quote ready for your review.
+                                                                </p>
+                                                            </div>
+
+                                                            <div className="w-px h-12 bg-slate-200 hidden md:block" />
+
+                                                            <div className="flex items-center gap-6 min-w-fit">
+                                                                <div className="space-y-1">
+                                                                    <p className="text-sm font-bold text-slate-900 mb-1">{req.altCandidate.fullName}</p>
+                                                                    <div className="flex gap-2">
+                                                                        <Link 
+                                                                            to={`/employer/talent-pool/${req.altCandidate.id}`}
+                                                                            className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-navy transition-colors"
+                                                                        >
+                                                                            View Profile
+                                                                        </Link>
+                                                                        <span className="text-slate-200">|</span>
+                                                                        <Link 
+                                                                            to={`/employer/quotes/${req.id}`}
+                                                                            className={cn(
+                                                                                "text-[10px] font-bold uppercase tracking-widest transition-colors",
+                                                                                req.status === 'approved' ? "text-emerald-500 hover:text-emerald-600" : "text-gold hover:text-orange-500"
+                                                                            )}
+                                                                        >
+                                                                            {req.status === 'approved' ? "Review Selection" : "Review Quote"}
+                                                                        </Link>
+                                                                    </div>
+                                                                </div>
+                                                                <Link 
+                                                                    to={`/employer/quotes/${req.id}`}
+                                                                    className={cn(
+                                                                        "w-12 h-12 rounded-full text-white flex items-center justify-center transition-all shadow-lg group/btn",
+                                                                        req.status === 'approved' ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/10" : "bg-navy hover:bg-gold shadow-navy/10"
+                                                                    )}
+                                                                >
+                                                                    <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-0.5 transition-transform" />
+                                                                </Link>
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
                                                 </div>
 
-                                                <div className="flex items-center gap-3">
+                                                {/* Action Panel */}
+                                                <div className="flex items-center gap-3 lg:pt-1">
                                                     <Link
                                                         to={`/employer/talent-pool/${req.candidateId}`}
-                                                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary text-foreground hover:bg-border transition-all text-xs font-black uppercase tracking-widest"
+                                                        className="px-5 py-2.5 bg-slate-50 text-slate-600 text-[10px] font-bold uppercase tracking-widest border border-slate-100 rounded-xl hover:bg-slate-100 transition-all flex items-center gap-2"
                                                     >
-                                                        Profile
-                                                        <ArrowRight className="w-3.5 h-3.5" />
+                                                        Original Candidate
                                                     </Link>
-                                                    {req.status === 'approved' && (
+                                                    
+                                                    {['pending'].includes(req.status) && (
+                                                        <button
+                                                            onClick={() => handleCancelRequest(req.id)}
+                                                            className="px-5 py-2.5 bg-red-50 text-red-600 text-[10px] font-bold uppercase tracking-widest border border-red-100 rounded-xl hover:bg-red-100 hover:text-red-700 transition-all flex items-center gap-2"
+                                                        >
+                                                            <XCircle className="w-3.5 h-3.5" /> Cancel Request
+                                                        </button>
+                                                    )}
+
+                                                    {req.status === 'approved' && !req.altCandidate && (
                                                         <Link
                                                             to={`/employer/quotes/${req.id}`}
-                                                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gold/30 text-gold hover:bg-gold/5 shadow-sm transition-all text-xs font-black uppercase tracking-widest"
+                                                            className="px-5 py-2.5 bg-navy text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-gold transition-all shadow-md shadow-navy/10 flex items-center gap-2"
                                                         >
-                                                            Review Options
+                                                            {req.selectedOptionId ? "Payment Details" : "Review Details"}
                                                             <ArrowRight className="w-3.5 h-3.5" />
                                                         </Link>
                                                     )}

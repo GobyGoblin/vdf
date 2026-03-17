@@ -122,13 +122,17 @@ export interface QuoteRequest {
     id: string;
     employerId: string;
     candidateId: string;
-    status: 'pending' | 'approved' | 'rejected';
+    altCandidateId?: string;
+    status: 'pending' | 'approved' | 'rejected' | 'awaiting_candidate' | 'candidate_unresponsive';
     requestedAt: string;
     resolvedAt?: string;
+    unresponsiveAt?: string;
     costEstimate?: string;
     items?: QuoteItem[];
     options?: QuoteOption[];
     candidate?: any;
+    altCandidate?: any;
+    reactivationDeadline?: string;
 }
 
 export interface Plan {
